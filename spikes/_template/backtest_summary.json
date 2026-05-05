@@ -1,0 +1,13 @@
+{
+  "framework": "",
+  "symbol": "BTC/USDT",
+  "timeframe": "1h",
+  "period": "2022-01-01/2024-12-31",
+  "strategy": "EMA 20/100",
+  "capital": 10000,
+  "fee_rate": 0.001,
+  "slippage_basic": 0.0005,
+  "slippage_conservative": 0.001,
+  "metrics": {}
+}
+

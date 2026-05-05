@@ -1,0 +1,16 @@
+{
+  "benchmark": "buy_and_hold_btc",
+  "metrics": {
+    "return": null,
+    "max_drawdown": null,
+    "sharpe": null,
+    "calmar": null
+  },
+  "candidate": {
+    "return": null,
+    "max_drawdown": null,
+    "sharpe": null,
+    "calmar": null
+  }
+}
+
