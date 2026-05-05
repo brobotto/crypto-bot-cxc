@@ -24,7 +24,9 @@ class ExecutionPlanner:
             raise ValueError("approved intent must include quantity")
 
         order_type = self._order_type_for(intent.urgency)
-        limit_price = None if order_type == OrderType.MARKET else intent.limit_price or market_price
+        limit_price = None
+        if order_type != OrderType.MARKET:
+            limit_price = market_price if intent.limit_price is None else intent.limit_price
         tif = TimeInForce.GTC if order_type != OrderType.MARKET else TimeInForce.IOC
 
         return ConcreteOrder(
@@ -52,4 +54,3 @@ class ExecutionPlanner:
         if urgency == Urgency.TIME_SENSITIVE:
             return OrderType.LIMIT_IOC
         return OrderType.LIMIT
-

@@ -410,55 +410,104 @@ Portfolio Ledger (single source of truth)
 Monitoring / Alerting
 ```
 
-### Module Structure
+### Repository Structure
+
+โครงสร้างมาตรฐานหลังเริ่ม implementation จริง:
 
 ```
-crypto-bot/
-├── data/
-│   ├── exchange_client.py   # CCXT wrapper
-│   ├── ws_manager.py        # WebSocket + reconnect
-│   ├── validator.py         # stale guard, anomaly
-│   ├── ohlcv_store.py       # Parquet read/write
-│   └── feature_engine.py   # indicators (stateless)
-├── regime/
-│   ├── detector.py          # rule-based 8 states
-│   ├── models.py            # RegimeEvent dataclass
-│   └── hmm_detector.py     # V5
-├── strategy/
-│   ├── base.py              # Abstract (ไม่รู้จัก Broker)
-│   ├── ema_trend.py         # Primary V1
-│   ├── dca_baseline.py      # Benchmark fixture
-│   ├── grid_prototype.py    # Benchmark fixture
-│   └── router.py            # V5: regime → strategy
-├── risk/
-│   ├── position_sizer.py   # ATR + fixed %
-│   ├── circuit_breaker.py  # daily loss, drawdown
-│   └── portfolio_guard.py  # correlation, exposure
-├── execution/
-│   ├── planner.py           # urgency → ConcreteOrder
-│   ├── retry.py             # backoff + idempotency
-│   ├── kill_switch.py       # EMERGENCY
-│   └── dms_watchdog.py     # software DMS
-├── broker/
-│   ├── base.py              # BrokerInterface (abstract)
-│   ├── backtest_broker.py  # V1
-│   ├── paper_broker.py     # V2
-│   └── live_broker.py      # V3+
-├── ledger/
-│   ├── position_manager.py
-│   ├── trade_log.py         # append-only audit
-│   ├── pnl_calculator.py
-│   ├── balance_tracker.py
-│   └── reconciler.py
-├── monitoring/
-│   ├── metrics.py           # Prometheus
-│   ├── alerter.py           # Telegram + email
-│   ├── logger.py            # structured JSON
-│   └── drift_monitor.py    # 4-type drift
+crypto-bot-cxc/
+├── pyproject.toml
 ├── config/
-│   ├── settings.py          # load .env
-│   └── strategy_config.yaml # thresholds เป็น config
-└── main.py                  # startup → state machine
+│   └── strategy_config.yaml
+├── data/
+│   └── ohlcv/                         # local market data cache, ignored by git
+├── doc/
+│   ├── design/
+│   └── research/
+├── spikes/
+│   ├── spike_a_freqtrade/
+│   ├── spike_b_vectorbt/
+│   ├── spike_c_custom_mini_engine/
+│   ├── spike_d_nautilus/
+│   └── spike_e_jesse/
+├── src/
+│   └── crypto_bot_cxc/                # runtime package
+└── tests/
+```
+
+### Runtime Source Tree
+
+Runtime code ต้องอยู่ใต้ `src/crypto_bot_cxc/` เท่านั้น ไม่วาง module runtime ที่ root repo:
+
+```
+src/crypto_bot_cxc/
+├── broker/
+│   ├── base.py                        # BrokerInterface, Balance, OrderStatus
+│   ├── backtest_broker.py             # V1
+│   ├── paper_broker.py                # V2 planned
+│   └── live_broker.py                 # V3+ planned
+├── cli/
+│   ├── download_ohlcv.py              # local data download utility
+│   └── spike_c_backtest.py            # Spike C runner
+├── data/
+│   ├── exchange_client.py             # CCXT public data wrapper
+│   ├── feature_engine.py              # indicators / features
+│   ├── ohlcv_store.py                 # CSV/Parquet → MarketDataEvent
+│   ├── validator.py                   # V1 planned: stale/gap/anomaly policies
+│   └── ws_manager.py                  # V2 planned
+├── engine/
+│   └── backtest_engine.py             # V1
+├── events/
+│   └── models.py                      # MarketDataEvent, OrderIntent, FillEvent
+├── execution/
+│   ├── models.py                      # Urgency, ConcreteOrder, order enums
+│   ├── planner.py                     # OrderIntent → ConcreteOrder
+│   ├── retry.py                       # V3+ planned
+│   ├── kill_switch.py                 # V3+ planned
+│   └── dms_watchdog.py                # V2+ planned
+├── ledger/
+│   ├── models.py                      # Position, Trade, PortfolioState
+│   ├── portfolio_ledger.py            # fill-driven portfolio state
+│   ├── balance_tracker.py             # V2+ planned
+│   └── reconciler.py                  # V2+ planned
+├── monitoring/
+│   ├── logger.py                      # V1 planned
+│   ├── alerter.py                     # V2+ planned
+│   ├── metrics.py                     # V3+ planned
+│   └── drift_monitor.py               # V4+ planned
+├── regime/
+│   ├── detector.py                    # rule-based 8 states
+│   ├── models.py
+│   └── hmm_detector.py                # V5 planned
+├── reports/
+│   ├── backtest_report.py
+│   └── benchmark.py                   # V1 planned
+├── risk/
+│   ├── manager.py                     # V1 baseline risk manager
+│   ├── position_sizer.py              # V1 planned if split from manager
+│   ├── circuit_breaker.py             # V1 planned
+│   └── portfolio_guard.py             # V3+ planned
+└── strategy/
+    ├── base.py
+    ├── ema_trend.py                   # Primary V1
+    ├── dca_baseline.py                # V1 benchmark planned
+    ├── grid_prototype.py              # V1 benchmark planned
+    └── router.py                      # V5 planned
+```
+
+### Test Tree
+
+```
+tests/
+├── test_backtest_broker.py
+├── test_backtest_engine.py
+├── test_backtest_report.py
+├── test_events.py
+├── test_exchange_client.py
+├── test_execution_planner.py
+├── test_ledger.py
+├── test_ohlcv_store.py
+└── test_regime_detector.py
 ```
 
 ### Core Events

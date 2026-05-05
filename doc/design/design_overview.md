@@ -42,6 +42,8 @@ Data → Feature Engine → Regime Detector → Strategy
 
 เปลี่ยนแค่ **Broker** ระหว่าง version — ทุกอย่างอื่น code เดิม
 
+Runtime code อยู่ใต้ `src/crypto_bot_cxc/` และไฟล์ config หลักอยู่ที่ `config/strategy_config.yaml`
+
 ---
 
 ## Version Roadmap

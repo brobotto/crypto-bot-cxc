@@ -20,6 +20,7 @@ Completed in first setup pass:
 - Fee-aware portfolio ledger
 - Minimal backtest engine
 - Tests for broker fills, ledger P&L, planner, regime detector, and no-lookahead engine behavior
+- Review hardening pass: gap-open limit fills, OHLC validation, cash guard, strategy reset, warmup guard, and explicit fixed-regime warning
 - CSV/Parquet OHLCV loader
 - CSV/JSON report writer for required Spike outputs
 - CLI runner: `python -m crypto_bot_cxc.cli.spike_c_backtest`

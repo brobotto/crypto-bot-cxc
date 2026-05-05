@@ -24,6 +24,21 @@ def test_market_data_event_requires_utc_timestamp() -> None:
         )
 
 
+def test_market_data_event_rejects_inconsistent_ohlc() -> None:
+    with pytest.raises(ValueError, match="open must be within"):
+        MarketDataEvent(
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            symbol="BTC/USDT",
+            open=Decimal("120"),
+            high=Decimal("110"),
+            low=Decimal("90"),
+            close=Decimal("100"),
+            volume=Decimal("1"),
+            timeframe="1h",
+            is_closed=True,
+        )
+
+
 def test_order_intent_contract() -> None:
     intent = OrderIntent(
         strategy_id="ema_trend",
@@ -56,4 +71,3 @@ def test_fill_event_rejects_non_positive_quantity() -> None:
             filled_at=datetime.now(UTC),
             is_partial=False,
         )
-

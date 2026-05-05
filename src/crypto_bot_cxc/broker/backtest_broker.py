@@ -113,8 +113,7 @@ class BacktestBroker(BrokerInterface):
             return None
 
         if order.side == "BUY" and candle.low <= order.limit_price:
-            return order.limit_price
+            return min(order.limit_price, candle.open)
         if order.side == "SELL" and candle.high >= order.limit_price:
-            return order.limit_price
+            return max(order.limit_price, candle.open)
         return None
-

@@ -71,11 +71,13 @@ class PortfolioLedger:
 
         positions = dict(self._state.positions)
         positions[fill.symbol] = position
-        self._state = PortfolioState(
-            cash=self._state.cash - notional - fill.fee,
-            positions=positions,
-            realized_pnl=self._state.realized_pnl,
-            fees_paid=self._state.fees_paid + fill.fee,
+        self._commit_state(
+            PortfolioState(
+                cash=self._state.cash - notional - fill.fee,
+                positions=positions,
+                realized_pnl=self._state.realized_pnl,
+                fees_paid=self._state.fees_paid + fill.fee,
+            )
         )
         return Trade(
             fill_id=fill.order_id,
@@ -95,7 +97,7 @@ class PortfolioLedger:
             raise ValueError("cannot sell more than current long-only position")
 
         notional = fill.quantity * fill.price
-        entry_fee_portion = current.entry_fees_paid * (fill.quantity / current.quantity)
+        entry_fee_portion = (current.entry_fees_paid * fill.quantity) / current.quantity
         realized_pnl = (fill.price - current.avg_entry_price) * fill.quantity
         realized_pnl -= fill.fee + entry_fee_portion
         remaining_qty = current.quantity - fill.quantity
@@ -110,11 +112,13 @@ class PortfolioLedger:
                 entry_fees_paid=current.entry_fees_paid - entry_fee_portion,
             )
 
-        self._state = PortfolioState(
-            cash=self._state.cash + notional - fill.fee,
-            positions=positions,
-            realized_pnl=self._state.realized_pnl + realized_pnl,
-            fees_paid=self._state.fees_paid + fill.fee,
+        self._commit_state(
+            PortfolioState(
+                cash=self._state.cash + notional - fill.fee,
+                positions=positions,
+                realized_pnl=self._state.realized_pnl + realized_pnl,
+                fees_paid=self._state.fees_paid + fill.fee,
+            )
         )
         return Trade(
             fill_id=fill.order_id,
@@ -127,3 +131,8 @@ class PortfolioLedger:
             realized_pnl=realized_pnl,
             timestamp=fill.filled_at,
         )
+
+    def _commit_state(self, state: PortfolioState) -> None:
+        if state.cash < 0:
+            raise ValueError(f"cash went negative: {state.cash}")
+        self._state = state

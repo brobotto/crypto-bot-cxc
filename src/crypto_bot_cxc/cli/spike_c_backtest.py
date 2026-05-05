@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import warnings
 from decimal import Decimal
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from crypto_bot_cxc.data import load_ohlcv_events
 from crypto_bot_cxc.engine import BacktestEngine
 from crypto_bot_cxc.execution.planner import ExecutionPlanner
 from crypto_bot_cxc.ledger import PortfolioLedger
+from crypto_bot_cxc.regime import RegimeState
 from crypto_bot_cxc.reports import write_backtest_report
 from crypto_bot_cxc.risk import RiskConfig, RiskManager
 from crypto_bot_cxc.strategy import EMATrendConfig, EMATrendStrategy
@@ -27,6 +29,11 @@ def main() -> None:
         )
     )
     ledger = PortfolioLedger(initial_cash=initial_cash)
+    fixed_regime = RegimeState(args.fixed_regime)
+    warnings.warn(
+        f"Regime detection disabled for Spike C; using fixed_regime={fixed_regime.value}",
+        stacklevel=2,
+    )
     engine = BacktestEngine(
         strategy=EMATrendStrategy(strategy_config),
         risk_manager=RiskManager(
@@ -39,6 +46,7 @@ def main() -> None:
         planner=ExecutionPlanner(),
         broker=broker,
         ledger=ledger,
+        regime_provider=lambda _event: fixed_regime,
         warmup_period=args.slow_period,
     )
     result = engine.run(candles)
@@ -60,9 +68,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--risk-per-trade", type=Decimal, default=Decimal("0.01"))
     parser.add_argument("--max-open-positions", type=int, default=1)
     parser.add_argument("--min-order-notional", type=Decimal, default=Decimal("10"))
+    parser.add_argument(
+        "--fixed-regime",
+        choices=[state.value for state in RegimeState],
+        default=RegimeState.UPTREND_LOW_VOL.value,
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     main()
-

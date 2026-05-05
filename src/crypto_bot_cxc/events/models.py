@@ -31,6 +31,16 @@ class MarketDataEvent:
             raise ValueError("symbol is required")
         if not self.timeframe:
             raise ValueError("timeframe is required")
+        if self.high <= 0 or self.low <= 0 or self.open <= 0 or self.close <= 0:
+            raise ValueError("OHLC prices must be positive")
+        if self.volume < 0:
+            raise ValueError("volume cannot be negative")
+        if self.low > self.high:
+            raise ValueError("low cannot exceed high")
+        if not self.low <= self.open <= self.high:
+            raise ValueError("open must be within [low, high]")
+        if not self.low <= self.close <= self.high:
+            raise ValueError("close must be within [low, high]")
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,4 +100,3 @@ class FillEvent:
             raise ValueError("fee cannot be negative")
         if not self.fee_currency:
             raise ValueError("fee_currency is required")
-

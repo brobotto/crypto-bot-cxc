@@ -5,7 +5,7 @@
 - `ExecutionPlanner` is configured for next-open market execution to match the Spike C common test spec.
 - `BacktestBroker` currently supports full fills only.
 - `BacktestBroker` does not yet simulate balance rejection; `PortfolioLedger` is the source of truth.
-- Regime in `BacktestEngine` is currently fixed to `UPTREND_LOW_VOL`; full feature-driven regime integration is next.
+- Regime is injected into `BacktestEngine` through a `regime_provider`, but Spike C CLI still uses an explicit fixed-regime provider and emits a warning. Full feature-driven regime integration is next.
 - Report writer produces required files, but `regime_performance.csv` is currently an insufficient-data placeholder.
 - Full 2022-2024 Binance data cannot run until missing-candle policy is decided.
 

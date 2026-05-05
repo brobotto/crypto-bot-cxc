@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -12,7 +13,9 @@ from crypto_bot_cxc.ledger.models import Trade
 from crypto_bot_cxc.ledger.portfolio_ledger import PortfolioLedger
 from crypto_bot_cxc.regime.models import RegimeState
 from crypto_bot_cxc.risk.manager import RiskManager
-from crypto_bot_cxc.strategy.ema_trend import EMATrendStrategy
+from crypto_bot_cxc.strategy.base import BaseStrategy
+
+RegimeProvider = Callable[[MarketDataEvent], RegimeState]
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,21 +35,26 @@ class BacktestEngine:
     def __init__(
         self,
         *,
-        strategy: EMATrendStrategy,
+        strategy: BaseStrategy,
         risk_manager: RiskManager,
         planner: ExecutionPlanner,
         broker: BacktestBroker,
         ledger: PortfolioLedger,
+        regime_provider: RegimeProvider,
         warmup_period: int,
     ) -> None:
+        if warmup_period <= 0:
+            raise ValueError("warmup_period must be positive")
         self._strategy = strategy
         self._risk_manager = risk_manager
         self._planner = planner
         self._broker = broker
         self._ledger = ledger
+        self._regime_provider = regime_provider
         self._warmup_period = warmup_period
 
     def run(self, candles: list[MarketDataEvent]) -> BacktestResult:
+        self._strategy.reset()
         previous_fast: Decimal | None = None
         previous_slow: Decimal | None = None
         samples = 0
@@ -61,8 +69,8 @@ class BacktestEngine:
                 close=candle.close,
                 previous_fast=previous_fast,
                 previous_slow=previous_slow,
-                fast_period=self._strategy.config.fast_period,
-                slow_period=self._strategy.config.slow_period,
+                fast_period=self._strategy.fast_period,
+                slow_period=self._strategy.slow_period,
                 samples=samples,
             )
             previous_fast = ema_state.fast
@@ -74,7 +82,7 @@ class BacktestEngine:
                     candle,
                     ema_fast=ema_state.fast,
                     ema_slow=ema_state.slow,
-                    regime=RegimeState.UPTREND_LOW_VOL,
+                    regime=self._regime_provider(candle),
                 )
                 for intent in intents:
                     approved = self._risk_manager.validate(

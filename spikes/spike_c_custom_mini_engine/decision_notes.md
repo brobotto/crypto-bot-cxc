@@ -21,6 +21,7 @@ CSV OHLCV -> MarketDataEvent -> BacktestEngine -> trades/equity/summary reports
 - No-lookahead sequencing is straightforward to test.
 - Fee-aware accounting can stay local to the ledger.
 - The strategy can remain exchange-agnostic.
+- Review hardening confirmed the engine can take an explicit `regime_provider` instead of hiding a hardcoded regime.
 
 ## Cons / Risks
 

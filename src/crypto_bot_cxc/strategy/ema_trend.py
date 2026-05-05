@@ -28,6 +28,18 @@ class EMATrendStrategy(BaseStrategy):
         self._previous_fast: Decimal | None = None
         self._previous_slow: Decimal | None = None
 
+    @property
+    def fast_period(self) -> int:
+        return self.config.fast_period
+
+    @property
+    def slow_period(self) -> int:
+        return self.config.slow_period
+
+    def reset(self) -> None:
+        self._previous_fast = None
+        self._previous_slow = None
+
     def on_candle(
         self,
         event: MarketDataEvent,
@@ -78,4 +90,3 @@ class EMATrendStrategy(BaseStrategy):
         self._previous_fast = ema_fast
         self._previous_slow = ema_slow
         return intents
-

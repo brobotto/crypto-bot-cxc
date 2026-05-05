@@ -230,7 +230,7 @@ Worth the complexity สำหรับ project นี้?
     - save ไป Parquet: data/ohlcv/{symbol}_{timeframe}.parquet
     - validate: no gaps, correct timestamps, UTC
 
-[ ] data/ohlcv_store.py
+[ ] src/crypto_bot_cxc/data/ohlcv_store.py
     - load_candles(symbol, timeframe, start, end) → DataFrame
     - append_candles(...) → update Parquet
     - validate_candles(...) → raise ถ้าไม่ครบ
@@ -243,14 +243,14 @@ Worth the complexity สำหรับ project นี้?
 ### V1.2 — Event Contracts + Feature Engine
 
 ```
-[ ] events/models.py
+[ ] src/crypto_bot_cxc/events/models.py
     - MarketDataEvent (timestamp, OHLCV, is_closed)
     - OrderIntent (urgency, side, qty, reason, regime, intent_id)
     - FillEvent (order_id, intent_id, price, qty, fee, is_partial)
     - RegimeEvent (state, confidence, prev_state)
     - unit tests ครบทุก dataclass
 
-[ ] feature_engine.py (stateless functions)
+[ ] src/crypto_bot_cxc/data/feature_engine.py (stateless functions)
     - calc_ema(prices, period) → Series
     - calc_adx(high, low, close, period) → Series
     - calc_atr(high, low, close, period) → Series
@@ -265,10 +265,10 @@ Worth the complexity สำหรับ project นี้?
 ### V1.3 — Regime Detector
 
 ```
-[ ] regime/models.py
+[ ] src/crypto_bot_cxc/regime/models.py
     - RegimeState enum (8 states)
 
-[ ] regime/detector.py
+[ ] src/crypto_bot_cxc/regime/detector.py
     - detect_regime(features, config) → RegimeState
       ← รับ config ทั้งหมดจาก outside ไม่ hardcode
     - unit tests: test ทุก state path
@@ -289,7 +289,7 @@ Worth the complexity สำหรับ project นี้?
 ### V1.4 — BrokerInterface + BacktestBroker
 
 ```
-[ ] broker/base.py
+[ ] src/crypto_bot_cxc/broker/base.py
     - BrokerInterface (abstract)
       submit_order(order: ConcreteOrder) → order_id   # ExecutionPlanner transforms Intent → ConcreteOrder before this
       cancel_order(order_id) → bool
@@ -298,7 +298,7 @@ Worth the complexity สำหรับ project นี้?
       get_open_orders() → List[Order]
       get_fills_since(ts) → List[FillEvent]
 
-[ ] broker/backtest_broker.py
+[ ] src/crypto_bot_cxc/broker/backtest_broker.py
     - BacktestBroker implements BrokerInterface
     - next-candle execution (ไม่มี lookahead)
     - fill models (configurable):
@@ -308,7 +308,7 @@ Worth the complexity สำหรับ project นี้?
     - partial fill simulation (by volume cap) ← optional, V1.4 ค่อยใส่
     - unit tests: fill logic ทุก case
 
-[ ] broker/backtest_broker_test.py
+[ ] tests/test_backtest_broker.py
     - test market fill: ราคาถูก, ถูก candle, fee ถูก
     - test limit fill: fill/no-fill boundary
     - test post-only: reject logic
@@ -325,17 +325,17 @@ Worth the complexity สำหรับ project นี้?
 ### V1.5 — Risk Manager
 
 ```
-[ ] risk/position_sizer.py
+[ ] src/crypto_bot_cxc/risk/position_sizer.py
     - calc_position_size(balance, risk_pct, entry, stop) → Decimal
     - calc_atr_stop(entry, atr, multiplier) → Decimal
     - unit tests
 
-[ ] risk/circuit_breaker.py
+[ ] src/crypto_bot_cxc/risk/circuit_breaker.py
     - check_daily_loss(pnl, limit) → bool
     - check_max_drawdown(equity, peak, limit) → bool
     - check_consecutive_losses(count, limit) → bool
 
-[ ] risk/risk_manager.py
+[ ] src/crypto_bot_cxc/risk/manager.py
     - validate(intent, portfolio_state, config) → approved Intent | Reject
     - ห้ามให้ strategy bypass ทางนี้
 
@@ -354,27 +354,27 @@ Worth the complexity สำหรับ project นี้?
 ### V1.6 — Portfolio Ledger
 
 ```
-[ ] ledger/models.py
+[ ] src/crypto_bot_cxc/ledger/models.py
     - Position dataclass (Decimal fields)
     - Trade dataclass (append-only record)
     - Balance dataclass
 
-[ ] ledger/position_manager.py
+[ ] src/crypto_bot_cxc/ledger/position_manager.py
     - open_position(fill) → Position
     - update_position(fill) → Position (partial fill)
     - close_position(fill) → closed Position
     - get_unrealized_pnl(position, current_price) → Decimal
 
-[ ] ledger/trade_log.py
+[ ] src/crypto_bot_cxc/ledger/trade_log.py
     - append(fill) → Trade (append-only)
     - get_all() → List[Trade]
 
-[ ] ledger/pnl_calculator.py
+[ ] src/crypto_bot_cxc/ledger/pnl_calculator.py
     - calc_realized(entry_fill, exit_fill) → Decimal
     - calc_avg_entry(fills) → Decimal (weighted avg)
     - calc_equity(balance, positions, prices) → Decimal
 
-[ ] ledger/portfolio_ledger.py
+[ ] src/crypto_bot_cxc/ledger/portfolio_ledger.py
     - on_fill(fill_event) → PortfolioState
     - get_state() → PortfolioState
     - snapshot() → dict (สำหรับ save)
@@ -387,23 +387,23 @@ Worth the complexity สำหรับ project นี้?
 ### V1.7 — Strategy + ExecutionPlanner
 
 ```
-[ ] execution/planner.py
+[ ] src/crypto_bot_cxc/execution/planner.py
     - plan(intent, market_ctx, risk_state, caps) → ConcreteOrder
     - urgency → order type mapping (5 levels V1)
     - spread_too_wide guard
     - data_stale guard
 
-[ ] strategy/base.py
+[ ] src/crypto_bot_cxc/strategy/base.py
     - BaseStrategy (abstract)
     - on_candle(event, features, regime) → List[OrderIntent] | None
 
-[ ] strategy/ema_trend.py
+[ ] src/crypto_bot_cxc/strategy/ema_trend.py
     - EMAStrategy implements BaseStrategy
     - signal logic: EMA crossover → NORMAL entry
     - ไม่รู้จัก Broker, ไม่รู้จัก exchange
 
-[ ] strategy/dca_baseline.py (benchmark fixture)
-[ ] strategy/grid_prototype.py (benchmark fixture)
+[ ] src/crypto_bot_cxc/strategy/dca_baseline.py (benchmark fixture)
+[ ] src/crypto_bot_cxc/strategy/grid_prototype.py (benchmark fixture)
 ```
 
 **Done criteria:** EMA strategy ไม่มี lookahead, ส่ง OrderIntent ไม่ใช่ order type
@@ -413,20 +413,20 @@ Worth the complexity สำหรับ project นี้?
 ### V1.8 — Backtest Engine + Reports
 
 ```
-[ ] engine/backtest_engine.py
+[ ] src/crypto_bot_cxc/engine/backtest_engine.py
     - run(data, strategy, risk_mgr, broker, ledger, config) → Report
     - iterate candles ตามลำดับเวลา (ห้ามข้าม)
     - warmup period: skip max(all_lookback_periods) candles แรก
     - บันทึก regime ทุก candle
 
-[ ] reports/backtest_report.py
+[ ] src/crypto_bot_cxc/reports/backtest_report.py
     - generate(ledger, equity_curve, regimes) → dict
     - output: trades.csv, equity_curve.csv, summary.json
     - output: monthly_returns.csv
     - output: regime_performance.csv ← สำคัญที่สุด
       columns: regime, trades, win_rate, avg_pnl, profit_factor, sharpe
 
-[ ] reports/benchmark.py
+[ ] src/crypto_bot_cxc/reports/benchmark.py
     - compare_vs_bah(equity_curve, bah_curve) → dict
     - metrics: return, max_drawdown, sharpe, calmar, sortino
     - ไม่ใช้ Sharpe เดี่ยว — multi-metric comparison
