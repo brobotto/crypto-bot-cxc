@@ -1,0 +1,16 @@
+{
+  "benchmark": "buy_and_hold",
+  "strategy": {
+    "final_equity": "10080.38199703256",
+    "return_pct": "0.8038199703255922",
+    "max_drawdown_pct": "0.6821874907007339",
+    "sharpe_ratio": "0.6915132659286257"
+  },
+  "benchmark_metrics": {
+    "final_equity": "20056.52847760841",
+    "return_pct": "100.56528477608411",
+    "max_drawdown_pct": "67.37711687834668",
+    "sharpe_ratio": "0.7003678423393424"
+  },
+  "excess_return_pct": "-99.76146480575852"
+}

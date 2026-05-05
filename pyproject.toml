@@ -30,6 +30,9 @@ spike-b = [
 spike-a = [
   "freqtrade>=2026.4,<2027.0",
 ]
+spike-d = [
+  "nautilus_trader>=1.226,<2.0",
+]
 
 [project.scripts]
 cxc-download-ohlcv = "crypto_bot_cxc.cli.download_ohlcv:main"
