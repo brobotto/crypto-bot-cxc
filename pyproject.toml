@@ -27,6 +27,9 @@ spike-b = [
   "vectorbt>=1.0,<2.0",
   "pandas>=2.2,<3.0",
 ]
+spike-a = [
+  "freqtrade>=2026.4,<2027.0",
+]
 
 [project.scripts]
 cxc-download-ohlcv = "crypto_bot_cxc.cli.download_ohlcv:main"

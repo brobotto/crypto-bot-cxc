@@ -1,0 +1,32 @@
+{
+  "framework": "freqtrade",
+  "freqtrade_version": "2026.4",
+  "symbol": "BTC/USDT",
+  "timeframe": "1h",
+  "period": "2022-01-01T00:00:00+00:00/2024-12-31T23:00:00+00:00",
+  "freqtrade_backtest_period": "2022-01-05 04:00:00/2024-12-31 23:00:00",
+  "strategy": "EMA 20/100",
+  "capital": "10000.000000",
+  "fee_rate": "0.001000",
+  "slippage": "not modeled by native Freqtrade backtesting in this spike",
+  "execution": "Freqtrade backtesting with market orders on next candle",
+  "sizing": "custom_stake_amount returns about 1% of available stake",
+  "gap_policy": "forward_fill",
+  "max_forward_fill_candles": "3",
+  "metrics": {
+    "rows": "26304",
+    "trades": "320",
+    "closed_trades": "160",
+    "final_equity": "10080.382191",
+    "total_return_pct": "0.803822",
+    "max_drawdown_pct": "0.681990",
+    "sharpe_ratio": "0.692913",
+    "total_realized_pnl": "80.382191",
+    "total_fees": "32.081764",
+    "benchmark_final_equity": "20056.528478",
+    "benchmark_return_pct": "100.565285",
+    "benchmark_max_drawdown_pct": "67.377117",
+    "benchmark_sharpe_ratio": "0.700368",
+    "excess_return_pct": "-99.761463"
+  }
+}
