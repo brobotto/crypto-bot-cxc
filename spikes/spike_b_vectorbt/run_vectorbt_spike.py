@@ -436,11 +436,25 @@ def _sharpe_ratio(equity: pd.Series) -> float:
 
 def _periods_per_year(equity: pd.Series) -> float:
     index = equity.index
+    gaps: list[float] = []
     for previous, current in zip(index, index[1:], strict=False):
         seconds = (current - previous).total_seconds()
         if seconds > 0:
-            return 31_536_000 / seconds
-    return 0.0
+            gaps.append(float(seconds))
+        if len(gaps) >= 100:
+            break
+    median_gap = _median(gaps)
+    return 31_536_000 / median_gap if median_gap > 0 else 0.0
+
+
+def _median(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    midpoint = len(ordered) // 2
+    if len(ordered) % 2 == 1:
+        return ordered[midpoint]
+    return (ordered[midpoint - 1] + ordered[midpoint]) / 2
 
 
 def _sum_column(frame: pd.DataFrame, column: str) -> float:

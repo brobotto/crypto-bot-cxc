@@ -9,7 +9,7 @@ from crypto_bot_cxc.engine import BacktestResult, EquityPoint
 from crypto_bot_cxc.events import MarketDataEvent
 from crypto_bot_cxc.ledger.models import Trade
 from crypto_bot_cxc.reports import write_backtest_report
-from crypto_bot_cxc.reports.backtest_report import summarize
+from crypto_bot_cxc.reports.backtest_report import _periods_per_year, summarize
 
 
 def test_write_backtest_report_creates_required_files(tmp_path: Path) -> None:
@@ -121,3 +121,15 @@ def test_summarize_adds_annualized_sharpe_ratio() -> None:
     assert summary.sharpe_ratio != Decimal("0")
     assert summary.benchmark_sharpe_ratio is not None
     assert summary.benchmark_sharpe_ratio != Decimal("0")
+
+
+def test_periods_per_year_uses_median_gap() -> None:
+    start = datetime(2024, 1, 1, tzinfo=UTC)
+    equity_curve = [
+        EquityPoint(timestamp=start, equity=Decimal("1000")),
+        EquityPoint(timestamp=start + timedelta(hours=2), equity=Decimal("1001")),
+        EquityPoint(timestamp=start + timedelta(hours=3), equity=Decimal("1002")),
+        EquityPoint(timestamp=start + timedelta(hours=4), equity=Decimal("1003")),
+    ]
+
+    assert _periods_per_year(equity_curve) == Decimal("8760")

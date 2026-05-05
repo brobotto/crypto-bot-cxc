@@ -246,11 +246,25 @@ def _sharpe_ratio(equity_curve: list[EquityPoint]) -> Decimal:
 
 def _periods_per_year(equity_curve: list[EquityPoint]) -> Decimal:
     seconds_per_year = Decimal("31536000")
+    gaps: list[Decimal] = []
     for previous, current in zip(equity_curve, equity_curve[1:], strict=False):
         period_seconds = (current.timestamp - previous.timestamp).total_seconds()
         if period_seconds > 0:
-            return seconds_per_year / Decimal(str(period_seconds))
-    return Decimal("0")
+            gaps.append(Decimal(str(period_seconds)))
+        if len(gaps) >= 100:
+            break
+    median_gap = _median(gaps)
+    return seconds_per_year / median_gap if median_gap > 0 else Decimal("0")
+
+
+def _median(values: list[Decimal]) -> Decimal:
+    if not values:
+        return Decimal("0")
+    ordered = sorted(values)
+    midpoint = len(ordered) // 2
+    if len(ordered) % 2 == 1:
+        return ordered[midpoint]
+    return (ordered[midpoint - 1] + ordered[midpoint]) / Decimal("2")
 
 
 def _buy_and_hold_curve(

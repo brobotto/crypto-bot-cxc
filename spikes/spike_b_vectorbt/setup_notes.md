@@ -15,6 +15,6 @@
 
 ## Notes
 
-- `pyproject.toml` now constrains base pandas to `<3.0` and adds optional extra `spike-b` for VectorBT.
+- `pyproject.toml` keeps core pandas open at `>=2.2` and places the VectorBT `pandas<3.0` constraint inside optional extra `spike-b`.
 - Generated `reports_full/` is ignored by git through the existing spike report ignore rule.
 - Stable result files are committed in the spike root.

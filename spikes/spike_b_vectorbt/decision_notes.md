@@ -14,6 +14,8 @@ VectorBT is viable as a research and parameter-sweep companion. It reproduced th
 
 The remaining difference is expected because VectorBT percent sizing is not exactly the same as custom quantity sizing and Decimal rounding.
 
+EMA formula alignment was checked after review: the custom `update_ema` uses `alpha = 2 / (period + 1)`, matching pandas/VectorBT `ewm(span=period, adjust=False)`.
+
 ## Pros
 
 - Very fast to create parameter sweeps.
