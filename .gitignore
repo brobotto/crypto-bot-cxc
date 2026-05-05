@@ -20,4 +20,4 @@ logs/
 spikes/**/.venv/
 spikes/**/user_data/
 spikes/**/backtest_results/
-spikes/**/reports/
+spikes/**/reports*/

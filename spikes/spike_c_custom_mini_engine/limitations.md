@@ -7,7 +7,8 @@
 - `BacktestBroker` does not yet simulate balance rejection; `PortfolioLedger` is the source of truth.
 - Regime is injected into `BacktestEngine` through a `regime_provider`, but Spike C CLI still uses an explicit fixed-regime provider and emits a warning. Full feature-driven regime integration is next.
 - Report writer produces required files, but `regime_performance.csv` is currently an insufficient-data placeholder.
-- Full 2022-2024 Binance data cannot run until missing-candle policy is decided.
+- Full 2022-2024 Binance data requires explicit `gap_policy=forward_fill` because one Binance hourly candle is missing.
+- Buy-and-hold benchmark is implemented, but benchmark metrics are basic return/drawdown only.
 
 ## Known Design Notes
 
@@ -15,3 +16,4 @@
 - Strategy emits `OrderIntent`; broker only receives `ConcreteOrder`.
 - The engine executes pending broker orders before generating new signals on the current candle, preventing same-candle fills.
 - OHLCV loader now rejects timestamp gaps rather than silently running on incomplete market data.
+- Forward-fill gap policy creates zero-volume synthetic candles using previous close for OHLC.

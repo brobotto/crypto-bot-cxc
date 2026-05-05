@@ -6,7 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from crypto_bot_cxc.broker import BacktestBroker, BacktestBrokerConfig
-from crypto_bot_cxc.data import load_ohlcv_events
+from crypto_bot_cxc.data import GapPolicy, load_ohlcv_events
 from crypto_bot_cxc.engine import BacktestEngine
 from crypto_bot_cxc.execution.planner import ExecutionPlanner
 from crypto_bot_cxc.ledger import PortfolioLedger
@@ -19,7 +19,18 @@ from crypto_bot_cxc.strategy import EMATrendConfig, EMATrendStrategy
 def main() -> None:
     args = parse_args()
     initial_cash = Decimal(str(args.initial_cash))
-    candles = load_ohlcv_events(args.input, symbol=args.symbol, timeframe=args.timeframe)
+    gap_policy = GapPolicy(args.gap_policy)
+    if gap_policy == GapPolicy.FORWARD_FILL:
+        warnings.warn(
+            "Using gap_policy=forward_fill; missing candles will be synthetic zero-volume bars",
+            stacklevel=2,
+        )
+    candles = load_ohlcv_events(
+        args.input,
+        symbol=args.symbol,
+        timeframe=args.timeframe,
+        gap_policy=gap_policy,
+    )
 
     strategy_config = EMATrendConfig(fast_period=args.fast_period, slow_period=args.slow_period)
     broker = BacktestBroker(
@@ -50,7 +61,12 @@ def main() -> None:
         warmup_period=args.slow_period,
     )
     result = engine.run(candles)
-    summary = write_backtest_report(result, output_dir=args.output_dir, initial_cash=initial_cash)
+    summary = write_backtest_report(
+        result,
+        output_dir=args.output_dir,
+        initial_cash=initial_cash,
+        benchmark_events=candles,
+    )
     print(f"trades={summary.trades} final_equity={summary.final_equity}")
 
 
@@ -68,6 +84,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--risk-per-trade", type=Decimal, default=Decimal("0.01"))
     parser.add_argument("--max-open-positions", type=int, default=1)
     parser.add_argument("--min-order-notional", type=Decimal, default=Decimal("10"))
+    parser.add_argument(
+        "--gap-policy",
+        choices=[policy.value for policy in GapPolicy],
+        default=GapPolicy.STRICT.value,
+    )
     parser.add_argument(
         "--fixed-regime",
         choices=[state.value for state in RegimeState],
