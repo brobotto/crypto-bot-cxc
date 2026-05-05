@@ -1,0 +1,26 @@
+{
+  "framework": "custom_mini_engine",
+  "symbol": "BTC/USDT",
+  "timeframe": "1h",
+  "period": "2024-01-01/2025-01-01",
+  "strategy": "EMA 20/100",
+  "capital": "10000",
+  "fee_rate": "0.001",
+  "slippage": "0.0005",
+  "execution": "next candle market fill",
+  "metrics": {
+    "rows": "8784",
+    "trades": "92",
+    "final_equity": "10078.675091426681485",
+    "total_return_pct": "0.7867509142668148500",
+    "max_drawdown_pct": "0.2513729498623731906536073251",
+    "total_realized_pnl": "78.675091426681485",
+    "total_fees": "9.326185584813515"
+  },
+  "known_data_issue": {
+    "full_2022_2024_rows": "26303",
+    "expected_full_2022_2024_rows": "26304",
+    "missing_candle": "2023-03-24T13:00:00Z",
+    "status": "blocked until explicit gap policy is chosen"
+  }
+}

@@ -1,0 +1,17 @@
+# Limitations
+
+## Current Mini Engine Limitations
+
+- `ExecutionPlanner` is configured for next-open market execution to match the Spike C common test spec.
+- `BacktestBroker` currently supports full fills only.
+- `BacktestBroker` does not yet simulate balance rejection; `PortfolioLedger` is the source of truth.
+- Regime in `BacktestEngine` is currently fixed to `UPTREND_LOW_VOL`; full feature-driven regime integration is next.
+- Report writer produces required files, but `regime_performance.csv` is currently an insufficient-data placeholder.
+- Full 2022-2024 Binance data cannot run until missing-candle policy is decided.
+
+## Known Design Notes
+
+- Fee-aware realized P&L is implemented in the ledger by prorating entry fees on exit.
+- Strategy emits `OrderIntent`; broker only receives `ConcreteOrder`.
+- The engine executes pending broker orders before generating new signals on the current candle, preventing same-candle fills.
+- OHLCV loader now rejects timestamp gaps rather than silently running on incomplete market data.

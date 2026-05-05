@@ -24,6 +24,10 @@ dev = [
   "mypy>=1.13",
 ]
 
+[project.scripts]
+cxc-download-ohlcv = "crypto_bot_cxc.cli.download_ohlcv:main"
+cxc-spike-c-backtest = "crypto_bot_cxc.cli.spike_c_backtest:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -44,4 +48,3 @@ python_version = "3.13"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
-
