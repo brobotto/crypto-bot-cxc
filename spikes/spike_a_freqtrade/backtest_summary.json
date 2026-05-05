@@ -11,6 +11,7 @@
   "slippage": "not modeled by native Freqtrade backtesting in this spike",
   "execution": "Freqtrade backtesting with market orders on next candle",
   "sizing": "custom_stake_amount returns about 1% of available stake",
+  "benchmark_note": "Buy-and-hold benchmark starts at the first input candle; Freqtrade strategy starts after startup_candle_count warmup.",
   "gap_policy": "forward_fill",
   "max_forward_fill_candles": "3",
   "metrics": {

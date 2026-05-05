@@ -326,43 +326,6 @@ def _events_to_frame(events: list[MarketDataEvent]) -> pd.DataFrame:
     return frame
 
 
-def _equity_from_trades(
-    *,
-    frame: pd.DataFrame,
-    trades: list[dict[str, Any]],
-    initial_cash: float,
-) -> pd.Series:
-    trade_events: dict[pd.Timestamp, list[dict[str, Any]]] = {}
-    for trade in trades:
-        open_time = pd.Timestamp(trade["open_date"]).tz_convert("UTC")
-        close_time = pd.Timestamp(trade["close_date"]).tz_convert("UTC")
-        trade_events.setdefault(open_time, []).append({"kind": "open", "trade": trade})
-        trade_events.setdefault(close_time, []).append({"kind": "close", "trade": trade})
-
-    cash = initial_cash
-    positions: list[dict[str, float]] = []
-    values: list[float] = []
-    for timestamp, row in frame.iterrows():
-        for event in trade_events.get(timestamp, []):
-            trade = event["trade"]
-            if event["kind"] == "open":
-                amount = float(trade["amount"])
-                open_rate = float(trade["open_rate"])
-                open_fee = float(trade.get("fee_open_cost", 0.0))
-                cash -= amount * open_rate + open_fee
-                positions.append({"amount": amount, "open_rate": open_rate, "open_fee": open_fee})
-            else:
-                amount = float(trade["amount"])
-                close_rate = float(trade["close_rate"])
-                close_fee = float(trade.get("fee_close_cost", 0.0))
-                cash += amount * close_rate - close_fee
-                positions = positions[1:]
-        close = float(row["close"])
-        position_value = sum(position["amount"] * close for position in positions)
-        values.append(cash + position_value)
-    return pd.Series(values, index=frame.index)
-
-
 def _summary_payload(
     *,
     args: argparse.Namespace,
@@ -408,6 +371,10 @@ def _summary_payload(
         "slippage": "not modeled by native Freqtrade backtesting in this spike",
         "execution": "Freqtrade backtesting with market orders on next candle",
         "sizing": "custom_stake_amount returns about 1% of available stake",
+        "benchmark_note": (
+            "Buy-and-hold benchmark starts at the first input candle; Freqtrade strategy "
+            "starts after startup_candle_count warmup."
+        ),
         "gap_policy": args.gap_policy,
         "max_forward_fill_candles": str(args.max_forward_fill_candles),
         "metrics": metrics,
@@ -539,8 +506,22 @@ def _trade_fee_total(trade: dict[str, Any]) -> float:
 
 
 def _order_fee(order: dict[str, Any]) -> float:
+    for fee_key in ("fee_open_cost", "fee_close_cost", "fee_cost"):
+        fee_cost = order.get(fee_key)
+        if fee_cost is not None:
+            return abs(float(fee_cost))
+
     notional = float(order["amount"]) * float(order["safe_price"])
-    return abs(float(order["cost"]) - notional)
+    cost = float(order["cost"])
+    exported_fee = cost - notional
+    if exported_fee >= 0.0:
+        return exported_fee
+
+    # Fallback for a future Freqtrade export that reports sell cost as net proceeds.
+    side = str(order.get("ft_order_side", "")).lower()
+    if side == "sell":
+        return notional - cost
+    return abs(exported_fee)
 
 
 def _buy_and_hold_equity(close: pd.Series, *, initial_cash: float) -> pd.Series:

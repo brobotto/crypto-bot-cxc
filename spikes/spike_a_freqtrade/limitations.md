@@ -10,6 +10,8 @@
 - Native Freqtrade backtesting in this spike does not model the custom common-spec slippage rate of `0.0005`.
 - Market orders require `entry_pricing.price_side = "other"` and `exit_pricing.price_side = "other"`.
 - Freqtrade moves the backtest start by `startup_candle_count`, so reported backtest period starts at `2022-01-05 04:00:00`.
+- The buy-and-hold benchmark starts at the first input candle, while the strategy starts after the 100-candle warmup. This is consistent with Spike B/C reporting, but benchmark has a warmup head start.
+- The warmup boundary is slightly different from the custom engine: Freqtrade starts signals after `startup_candle_count`, while the custom spike starts once its warmup condition is met. It did not change the trade count in this dataset.
 - Freqtrade reports closed trades, while the common report uses fill/order rows. This spike records both `closed_trades=160` and `trades=320`.
 
 ## Ledger / Reconciliation Gaps
