@@ -9,6 +9,7 @@ from typing import Any
 from crypto_bot_cxc.events.models import MarketDataEvent
 
 REQUIRED_COLUMNS = {"timestamp", "open", "high", "low", "close", "volume"}
+DEFAULT_MAX_FORWARD_FILL_CANDLES = 3
 
 
 class GapPolicy(StrEnum):
@@ -22,6 +23,7 @@ def load_ohlcv_events(
     symbol: str,
     timeframe: str,
     gap_policy: GapPolicy = GapPolicy.STRICT,
+    max_forward_fill_candles: int = DEFAULT_MAX_FORWARD_FILL_CANDLES,
 ) -> list[MarketDataEvent]:
     """Load OHLCV CSV/Parquet into closed MarketDataEvent objects."""
     suffix = path.suffix.lower()
@@ -33,7 +35,12 @@ def load_ohlcv_events(
         raise ValueError(f"unsupported OHLCV file extension: {path.suffix}")
 
     events = [_row_to_event(row, symbol=symbol, timeframe=timeframe) for row in rows]
-    return _validate_and_apply_gap_policy(events, timeframe=timeframe, gap_policy=gap_policy)
+    return _validate_and_apply_gap_policy(
+        events,
+        timeframe=timeframe,
+        gap_policy=gap_policy,
+        max_forward_fill_candles=max_forward_fill_candles,
+    )
 
 
 def _read_csv_rows(path: Path) -> list[dict[str, Any]]:
@@ -95,9 +102,12 @@ def _validate_and_apply_gap_policy(
     *,
     timeframe: str,
     gap_policy: GapPolicy,
+    max_forward_fill_candles: int,
 ) -> list[MarketDataEvent]:
     if not events:
         raise ValueError("OHLCV file produced no events")
+    if max_forward_fill_candles < 0:
+        raise ValueError("max_forward_fill_candles cannot be negative")
     expected_delta = _timeframe_delta(timeframe)
     normalized: list[MarketDataEvent] = []
     previous: datetime | None = None
@@ -105,20 +115,22 @@ def _validate_and_apply_gap_policy(
     for event in events:
         if previous is not None and event.timestamp <= previous:
             raise ValueError("OHLCV timestamps must be strictly increasing")
-        if previous is not None and expected_delta is not None:
+        if previous is not None:
             actual_delta = event.timestamp - previous
             if actual_delta != expected_delta:
-                if gap_policy == GapPolicy.STRICT or previous_event is None:
+                if gap_policy == GapPolicy.STRICT:
                     raise ValueError(
                         "OHLCV timestamp gap detected: "
                         f"expected {expected_delta}, got {actual_delta} "
                         f"between {previous.isoformat()} and {event.timestamp.isoformat()}"
                     )
+                assert previous_event is not None
                 normalized.extend(
                     _forward_fill_gap(
                         previous_event=previous_event,
                         next_event=event,
                         expected_delta=expected_delta,
+                        max_fill_candles=max_forward_fill_candles,
                     )
                 )
         normalized.append(event)
@@ -132,10 +144,17 @@ def _forward_fill_gap(
     previous_event: MarketDataEvent,
     next_event: MarketDataEvent,
     expected_delta: timedelta,
+    max_fill_candles: int,
 ) -> list[MarketDataEvent]:
     synthetic_events: list[MarketDataEvent] = []
     timestamp = previous_event.timestamp + expected_delta
     while timestamp < next_event.timestamp:
+        if len(synthetic_events) >= max_fill_candles:
+            raise ValueError(
+                "OHLCV timestamp gap too large to forward-fill: "
+                f"more than {max_fill_candles} missing candles between "
+                f"{previous_event.timestamp.isoformat()} and {next_event.timestamp.isoformat()}"
+            )
         synthetic_events.append(
             MarketDataEvent(
                 timestamp=timestamp,
@@ -153,11 +172,13 @@ def _forward_fill_gap(
     return synthetic_events
 
 
-def _timeframe_delta(timeframe: str) -> timedelta | None:
+def _timeframe_delta(timeframe: str) -> timedelta:
     if timeframe.endswith("m"):
         return timedelta(minutes=int(timeframe[:-1]))
     if timeframe.endswith("h"):
         return timedelta(hours=int(timeframe[:-1]))
     if timeframe.endswith("d"):
         return timedelta(days=int(timeframe[:-1]))
-    return None
+    if timeframe.endswith("w"):
+        return timedelta(weeks=int(timeframe[:-1]))
+    raise ValueError(f"unsupported timeframe for gap validation: {timeframe}")

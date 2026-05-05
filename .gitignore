@@ -12,8 +12,8 @@ htmlcov/
 .env.*
 !.env.example
 
-data/ohlcv/*.parquet
-data/ohlcv/*.csv
+data/ohlcv/**/*.parquet
+data/ohlcv/**/*.csv
 outputs/
 logs/
 

@@ -9,23 +9,26 @@
   "slippage": "0.0005",
   "execution": "next candle market fill",
   "gap_policy": "forward_fill",
+  "max_forward_fill_candles": "3",
   "metrics": {
     "rows": "26304",
     "trades": "320",
     "final_equity": "10064.214042562556305",
     "total_return_pct": "0.6421404256255630500",
     "max_drawdown_pct": "0.7314326859083853413459678443",
+    "sharpe_ratio": "0.5530336892640073162211567991",
     "total_realized_pnl": "64.214042562556305",
     "total_fees": "32.056701315108695",
     "benchmark_final_equity": "20056.52847760840858425248730",
     "benchmark_return_pct": "100.5652847760840858425248730",
     "benchmark_max_drawdown_pct": "67.37711687834668411054264255",
+    "benchmark_sharpe_ratio": "0.7003678423393491376027869511",
     "excess_return_pct": "-99.9231443504585227925248730"
   },
   "known_data_issue": {
     "full_2022_2024_rows": "26303",
     "expected_full_2022_2024_rows": "26304",
     "missing_candle": "2023-03-24T13:00:00Z",
-    "status": "blocked until explicit gap policy is chosen"
+    "status": "handled by explicit forward_fill policy capped at 3 synthetic candles"
   }
 }

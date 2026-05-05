@@ -22,7 +22,8 @@ def main() -> None:
     gap_policy = GapPolicy(args.gap_policy)
     if gap_policy == GapPolicy.FORWARD_FILL:
         warnings.warn(
-            "Using gap_policy=forward_fill; missing candles will be synthetic zero-volume bars",
+            "Using gap_policy=forward_fill; missing candles will be synthetic zero-volume bars "
+            f"up to max_forward_fill_candles={args.max_forward_fill_candles}",
             stacklevel=2,
         )
     candles = load_ohlcv_events(
@@ -30,6 +31,7 @@ def main() -> None:
         symbol=args.symbol,
         timeframe=args.timeframe,
         gap_policy=gap_policy,
+        max_forward_fill_candles=args.max_forward_fill_candles,
     )
 
     strategy_config = EMATrendConfig(fast_period=args.fast_period, slow_period=args.slow_period)
@@ -89,6 +91,7 @@ def parse_args() -> argparse.Namespace:
         choices=[policy.value for policy in GapPolicy],
         default=GapPolicy.STRICT.value,
     )
+    parser.add_argument("--max-forward-fill-candles", type=int, default=3)
     parser.add_argument(
         "--fixed-regime",
         choices=[state.value for state in RegimeState],

@@ -27,3 +27,4 @@ py -m venv .venv
 - Binance BTC/USDT 1h full 2022-2024 has one missing hourly candle in downloaded public data:
   `2023-03-24T13:00:00Z`.
 - The loader defaults to `gap_policy=strict`. Full 2022-2024 run requires explicit `--gap-policy forward_fill`.
+- `forward_fill` is capped at 3 synthetic candles by default; larger gaps should fail until a stricter repair policy is chosen.

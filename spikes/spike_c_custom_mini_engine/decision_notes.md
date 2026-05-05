@@ -50,10 +50,12 @@ Run used explicit `--gap-policy forward_fill` for missing candle `2023-03-24T13:
 - Final equity: 10064.214042562556305
 - Total return: 0.6421404256255630500%
 - Max drawdown: 0.7314326859083853413459678443%
+- Sharpe ratio: 0.5530336892640073162211567991
 - Total realized P&L: 64.214042562556305
 - Total fees: 32.056701315108695
 - Buy-and-hold final equity: 20056.52847760840858425248730
 - Buy-and-hold return: 100.5652847760840858425248730%
+- Buy-and-hold Sharpe ratio: 0.7003678423393491376027869511
 - Excess return vs buy-and-hold: -99.9231443504585227925248730%
 
 ## Recommendation

@@ -17,11 +17,13 @@ class SummaryMetrics:
     final_equity: Decimal
     total_return_pct: Decimal
     max_drawdown_pct: Decimal
+    sharpe_ratio: Decimal
     total_realized_pnl: Decimal
     total_fees: Decimal
     benchmark_final_equity: Decimal | None = None
     benchmark_return_pct: Decimal | None = None
     benchmark_max_drawdown_pct: Decimal | None = None
+    benchmark_sharpe_ratio: Decimal | None = None
     excess_return_pct: Decimal | None = None
 
 
@@ -61,12 +63,14 @@ def summarize(
     benchmark_final_equity = benchmark_curve[-1].equity if benchmark_curve else None
     benchmark_return_pct = None
     benchmark_max_drawdown_pct = None
+    benchmark_sharpe_ratio = None
     excess_return_pct = None
     if benchmark_final_equity is not None:
         benchmark_return_pct = (
             benchmark_final_equity / initial_cash - Decimal("1")
         ) * Decimal("100")
         benchmark_max_drawdown_pct = _max_drawdown_pct(benchmark_curve or [])
+        benchmark_sharpe_ratio = _sharpe_ratio(benchmark_curve or [])
         excess_return_pct = total_return_pct - benchmark_return_pct
 
     return SummaryMetrics(
@@ -74,11 +78,13 @@ def summarize(
         final_equity=result.final_equity,
         total_return_pct=total_return_pct,
         max_drawdown_pct=_max_drawdown_pct(result.equity_curve),
+        sharpe_ratio=_sharpe_ratio(result.equity_curve),
         total_realized_pnl=realized,
         total_fees=fees,
         benchmark_final_equity=benchmark_final_equity,
         benchmark_return_pct=benchmark_return_pct,
         benchmark_max_drawdown_pct=benchmark_max_drawdown_pct,
+        benchmark_sharpe_ratio=benchmark_sharpe_ratio,
         excess_return_pct=excess_return_pct,
     )
 
@@ -136,11 +142,13 @@ def _write_benchmark_comparison(path: Path, summary: SummaryMetrics) -> None:
             "final_equity": str(summary.final_equity),
             "return_pct": str(summary.total_return_pct),
             "max_drawdown_pct": str(summary.max_drawdown_pct),
+            "sharpe_ratio": str(summary.sharpe_ratio),
         },
         "benchmark_metrics": {
             "final_equity": _optional_decimal_to_json(summary.benchmark_final_equity),
             "return_pct": _optional_decimal_to_json(summary.benchmark_return_pct),
             "max_drawdown_pct": _optional_decimal_to_json(summary.benchmark_max_drawdown_pct),
+            "sharpe_ratio": _optional_decimal_to_json(summary.benchmark_sharpe_ratio),
         },
         "excess_return_pct": _optional_decimal_to_json(summary.excess_return_pct),
     }
@@ -165,7 +173,9 @@ def _write_monthly_returns(path: Path, equity_curve: list[EquityPoint]) -> None:
         for month in sorted(first_by_month):
             start = first_by_month[month]
             end = last_by_month[month]
-            return_pct = (end / start - Decimal("1")) * Decimal("100") if start else Decimal("0")
+            return_pct = (
+                (end / start - Decimal("1")) * Decimal("100") if start > 0 else Decimal("0")
+            )
             writer.writerow({"month": month, "return_pct": str(return_pct)})
 
 
@@ -207,6 +217,40 @@ def _max_drawdown_pct(equity_curve: list[EquityPoint]) -> Decimal:
             drawdown = (peak - point.equity) / peak * Decimal("100")
             max_drawdown = max(max_drawdown, drawdown)
     return max_drawdown
+
+
+def _sharpe_ratio(equity_curve: list[EquityPoint]) -> Decimal:
+    if len(equity_curve) < 2:
+        return Decimal("0")
+
+    returns: list[Decimal] = []
+    for previous, current in zip(equity_curve, equity_curve[1:], strict=False):
+        if previous.equity <= 0:
+            return Decimal("0")
+        returns.append(current.equity / previous.equity - Decimal("1"))
+
+    if not returns:
+        return Decimal("0")
+    mean_return = sum(returns, start=Decimal("0")) / Decimal(len(returns))
+    variance = (
+        sum(((period_return - mean_return) ** 2 for period_return in returns), start=Decimal("0"))
+        / Decimal(len(returns))
+    )
+    if variance == 0:
+        return Decimal("0")
+    periods_per_year = _periods_per_year(equity_curve)
+    if periods_per_year <= 0:
+        return Decimal("0")
+    return mean_return / variance.sqrt() * periods_per_year.sqrt()
+
+
+def _periods_per_year(equity_curve: list[EquityPoint]) -> Decimal:
+    seconds_per_year = Decimal("31536000")
+    for previous, current in zip(equity_curve, equity_curve[1:], strict=False):
+        period_seconds = (current.timestamp - previous.timestamp).total_seconds()
+        if period_seconds > 0:
+            return seconds_per_year / Decimal(str(period_seconds))
+    return Decimal("0")
 
 
 def _buy_and_hold_curve(

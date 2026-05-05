@@ -33,9 +33,9 @@ Completed in data/report pass:
 - Full BTC/USDT 1h 2022-2024 Binance download produced 26,303 rows and revealed one missing hourly candle
 - Explicit gap policy added:
   - default: `strict`
-  - optional: `forward_fill` synthetic zero-volume candles
+  - optional: `forward_fill` synthetic zero-volume candles, capped at 3 by default
 - Full BTC/USDT 1h 2022-2024 run completed with `--gap-policy forward_fill`
-- Buy-and-hold benchmark comparison added
+- Buy-and-hold benchmark comparison added with return, drawdown, and Sharpe metrics
 
 Not done yet:
 

@@ -89,3 +89,59 @@ def test_load_ohlcv_events_forward_fills_timeframe_gaps_when_explicit(tmp_path: 
     assert events[1].low == Decimal("105")
     assert events[1].close == Decimal("105")
     assert events[1].volume == Decimal("0")
+
+
+def test_load_ohlcv_events_rejects_forward_fill_gap_above_limit(tmp_path: Path) -> None:
+    path = tmp_path / "btcusdt_1h.csv"
+    path.write_text(
+        "\n".join(
+            [
+                "timestamp,open,high,low,close,volume",
+                "2024-01-01T00:00:00Z,100,110,90,105,1000",
+                "2024-01-01T05:00:00Z,105,115,95,110,1200",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="too large to forward-fill"):
+        load_ohlcv_events(
+            path,
+            symbol="BTC/USDT",
+            timeframe="1h",
+            gap_policy=GapPolicy.FORWARD_FILL,
+            max_forward_fill_candles=3,
+        )
+
+
+def test_load_ohlcv_events_validates_weekly_timeframe_gaps(tmp_path: Path) -> None:
+    path = tmp_path / "btcusdt_1w.csv"
+    path.write_text(
+        "\n".join(
+            [
+                "timestamp,open,high,low,close,volume",
+                "2024-01-01T00:00:00Z,100,110,90,105,1000",
+                "2024-01-15T00:00:00Z,105,115,95,110,1200",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="timestamp gap"):
+        load_ohlcv_events(path, symbol="BTC/USDT", timeframe="1w")
+
+
+def test_load_ohlcv_events_rejects_unsupported_timeframe(tmp_path: Path) -> None:
+    path = tmp_path / "btcusdt_unknown.csv"
+    path.write_text(
+        "\n".join(
+            [
+                "timestamp,open,high,low,close,volume",
+                "2024-01-01T00:00:00Z,100,110,90,105,1000",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="unsupported timeframe"):
+        load_ohlcv_events(path, symbol="BTC/USDT", timeframe="1fortnight")

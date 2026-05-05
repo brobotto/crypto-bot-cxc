@@ -9,6 +9,7 @@ from crypto_bot_cxc.engine import BacktestResult, EquityPoint
 from crypto_bot_cxc.events import MarketDataEvent
 from crypto_bot_cxc.ledger.models import Trade
 from crypto_bot_cxc.reports import write_backtest_report
+from crypto_bot_cxc.reports.backtest_report import summarize
 
 
 def test_write_backtest_report_creates_required_files(tmp_path: Path) -> None:
@@ -76,13 +77,47 @@ def test_write_backtest_report_creates_required_files(tmp_path: Path) -> None:
     payload = json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))
     assert payload["final_equity"] == "1010"
     assert payload["benchmark_return_pct"] == "20.0"
+    assert "sharpe_ratio" in payload
+    assert "benchmark_sharpe_ratio" in payload
 
     benchmark_payload = json.loads(
         (tmp_path / "benchmark_comparison.json").read_text(encoding="utf-8")
     )
     assert benchmark_payload["benchmark"] == "buy_and_hold"
     assert benchmark_payload["benchmark_metrics"]["return_pct"] == "20.0"
+    assert "sharpe_ratio" in benchmark_payload["strategy"]
+    assert "sharpe_ratio" in benchmark_payload["benchmark_metrics"]
 
     with (tmp_path / "trades.csv").open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     assert rows[0]["realized_pnl"] == "9.79"
+
+
+def test_summarize_adds_annualized_sharpe_ratio() -> None:
+    equity_curve = [
+        EquityPoint(timestamp=datetime(2024, 1, 1, tzinfo=UTC), equity=Decimal("1000")),
+        EquityPoint(
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC) + timedelta(hours=1),
+            equity=Decimal("1010"),
+        ),
+        EquityPoint(
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC) + timedelta(hours=2),
+            equity=Decimal("1005"),
+        ),
+    ]
+    benchmark_curve = [
+        EquityPoint(timestamp=equity_curve[0].timestamp, equity=Decimal("1000")),
+        EquityPoint(timestamp=equity_curve[1].timestamp, equity=Decimal("990")),
+        EquityPoint(timestamp=equity_curve[2].timestamp, equity=Decimal("1015")),
+    ]
+    result = BacktestResult(trades=[], equity_curve=equity_curve, final_equity=Decimal("1005"))
+
+    summary = summarize(
+        result,
+        initial_cash=Decimal("1000"),
+        benchmark_curve=benchmark_curve,
+    )
+
+    assert summary.sharpe_ratio != Decimal("0")
+    assert summary.benchmark_sharpe_ratio is not None
+    assert summary.benchmark_sharpe_ratio != Decimal("0")
