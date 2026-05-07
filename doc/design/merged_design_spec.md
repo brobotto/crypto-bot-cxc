@@ -62,7 +62,7 @@ Risk-first + Ledger-centric
 
 ## 2. Version Roadmap
 
-### V0 — Research + Spikes + Design Contracts ← ปัจจุบัน
+### V0 — Research + Spikes + Design Contracts ✅ ปิดแล้ว
 
 **เป้าหมาย:** มีข้อมูลพอตัดสินใจ framework/architecture และมี working prototype ที่จับต้องได้
 
@@ -70,33 +70,33 @@ Risk-first + Ledger-centric
 ✅ Knowledge base ครบ (v5)
 ✅ Design decisions สรุปแล้ว
 
-⬜ Framework Spikes A-D (common test spec เดียวกัน)
-    Spike A: Freqtrade           (2-3 วัน)
-    Spike B: VectorBT            (1-2 วัน)
-    Spike C: Custom mini engine  (3-5 วัน) ← required
-    Spike D: NautilusTrader      (3-5 วัน)
-    Spike E: Jesse free tier     (1-2 วัน, optional)
+✅ Framework Spikes A-D (common test spec เดียวกัน)
+    Spike A: Freqtrade           ✅ เสร็จ
+    Spike B: VectorBT            ✅ เสร็จ
+    Spike C: Custom mini engine  ✅ เสร็จ ← primary seed
+    Spike D: NautilusTrader      ✅ เสร็จ
+    Spike E: Jesse free tier     deferred optional
 
-⬜ Custom Mini Engine (Spike C ผลิต)
+✅ Custom Mini Engine (Spike C ผลิต)
     MarketDataEvent, OrderIntent, FillEvent dataclasses
     BacktestBroker prototype (next-candle fill)
     BrokerInterface draft
     Minimal Risk Manager
     Minimal Portfolio Ledger
 
-⬜ Spike Common Test Spec:
+✅ Spike Common Test Spec:
     Symbol: BTC/USDT | Timeframe: 1h | Period: 2022-2024
     Capital: 10,000 USDT | Strategy: EMA 20/100
     Fee: 0.1% | Slippage: 0.05% basic, 0.1% conservative
     Execution: next candle open | Benchmark: buy-and-hold BTC
 
-⬜ Output files ต่อ Spike:
+✅ Output files ต่อ Spike:
     setup_notes.md, strategy_code/, backtest_summary.json
     trades.csv, equity_curve.csv, benchmark_comparison.json
     limitations.md, time_spent.md, decision_notes.md
 ```
 
-**Gate ออก V0:** Spikes เสร็จครบ + framework/architecture path ตัดสินใจ + event contracts draft พร้อม
+**Gate ออก V0:** ผ่านแล้ว — custom core เป็น primary V1 engine, VectorBT เป็น research companion, Freqtrade/Nautilus เป็น references
 
 ---
 
@@ -725,7 +725,7 @@ NautilusTrader: reference สำหรับ backtest-live parity best practices
 
 | เรื่อง                  | สถานะ               | จะตัดสินเมื่อไหร่                 |
 | ----------------------- | ------------------- | --------------------------------- |
-| Primary framework       | รอ Spike A-D        | หลัง V0 spikes เสร็จ              |
+| Primary framework       | ตัดสินใจแล้ว: custom core primary + VectorBT companion | V0 ปิดแล้ว |
 | Exchange final          | รอ comparison       | ก่อน V3 live                      |
 | Strategy parameters     | รอ backtest         | ภายใน V1                          |
 | Strategy-regime mapping | รอ backtest         | ภายใน V1 (regime_performance.csv) |
@@ -746,7 +746,7 @@ NautilusTrader: reference สำหรับ backtest-live parity best practices
 ✅ เขียน Risk Manager baseline
 ✅ เริ่ม Spike A-D ตาม common test spec
 
-⬜ รอผล Spike: framework decision, strategy selection
+✅ ผล Spike A-D: custom core primary, VectorBT research companion
 ⬜ รอ backtest: strategy-regime mapping, parameter tuning
 ⬜ รอก่อน V3: exchange final decision
 ```
