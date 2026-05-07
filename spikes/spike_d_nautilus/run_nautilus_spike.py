@@ -57,6 +57,8 @@ def main() -> None:
         orders=orders,
         symbol=args.symbol,
         fee_rate=args.fee_rate,
+        # Assumes queued orders are submitted exactly on the synthetic bar ts_event
+        # at candle_open + HOUR - 1; this normalizes report time back to candle open.
         execution_timestamp_offset_ns=-HOUR_NANOS + 1,
     )
     equity = _equity_from_fills(
