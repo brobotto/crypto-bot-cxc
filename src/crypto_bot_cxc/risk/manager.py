@@ -11,8 +11,21 @@ from crypto_bot_cxc.ledger.models import PortfolioState
 class RiskConfig:
     risk_per_trade: Decimal
     max_open_positions: int
+    capital_reserve: Decimal = Decimal("0")
     min_order_notional: Decimal = Decimal("10")
     quantity_step: Decimal = Decimal("0.000001")
+
+    def __post_init__(self) -> None:
+        if self.risk_per_trade <= 0 or self.risk_per_trade > 1:
+            raise ValueError("risk_per_trade must be within (0, 1]")
+        if self.max_open_positions <= 0:
+            raise ValueError("max_open_positions must be positive")
+        if self.capital_reserve < 0 or self.capital_reserve >= 1:
+            raise ValueError("capital_reserve must be within [0, 1)")
+        if self.min_order_notional <= 0:
+            raise ValueError("min_order_notional must be positive")
+        if self.quantity_step <= 0:
+            raise ValueError("quantity_step must be positive")
 
 
 class RiskManager:
@@ -42,7 +55,8 @@ class RiskManager:
         if len(portfolio_state.positions) >= self._config.max_open_positions:
             return None
 
-        budget = portfolio_state.cash * self._config.risk_per_trade
+        tradable_cash = portfolio_state.cash * (Decimal("1") - self._config.capital_reserve)
+        budget = tradable_cash * self._config.risk_per_trade
         if budget < self._config.min_order_notional:
             return None
 

@@ -1,3 +1,13 @@
+strategy:
+  primary: ema_trend
+  symbols:
+    - BTC/USDT
+    - ETH/USDT
+  timeframe: 1h
+  fast_period: 20
+  slow_period: 100
+  warmup_period: 100
+
 regime:
   adx_trend_threshold: 25
   adx_sideways_threshold: 20
@@ -19,4 +29,3 @@ execution:
   basic_slippage_rate: 0.0005
   conservative_slippage_rate: 0.001
   next_candle_execution: true
-
