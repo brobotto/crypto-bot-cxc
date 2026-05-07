@@ -15,3 +15,9 @@ Optional:
 
 Each spike should write the same output files so the framework decision is evidence-based.
 
+Decision:
+
+- See `doc/design/framework_decision.md`.
+- Custom core is the V1 primary engine.
+- VectorBT is the research companion.
+- Freqtrade and NautilusTrader remain references, not primary V1 engines.
