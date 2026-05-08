@@ -1,3 +1,6 @@
+# SMOKE/TEST FIXTURE ONLY: parameters are intentionally artificial.
+# risk_per_trade=0.50 and zero fee/slippage keep the regression output
+# deterministic. Do not copy these values for real trading.
 strategy:
   primary: ema_trend
   symbols:

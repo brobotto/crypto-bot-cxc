@@ -20,6 +20,12 @@ Core direction:
 
 V1 smoke backtest:
 
-```powershell
-.venv\Scripts\python.exe -m crypto_bot_cxc.cli.backtest --input data/ohlcv/BTC_USDT_1h_v1_smoke.csv --config config/v1_smoke_strategy_config.yaml --output-dir outputs/v1_smoke --initial-cash 10000
+```bash
+cxc-backtest --input tests/fixtures/ohlcv/BTC_USDT_1h_v1_smoke.csv --config config/v1_smoke_strategy_config.yaml --output-dir outputs/v1_smoke --initial-cash 10000
+```
+
+Source-tree fallback:
+
+```bash
+python -m crypto_bot_cxc.cli.backtest --input tests/fixtures/ohlcv/BTC_USDT_1h_v1_smoke.csv --config config/v1_smoke_strategy_config.yaml --output-dir outputs/v1_smoke --initial-cash 10000
 ```

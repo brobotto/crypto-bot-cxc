@@ -5,7 +5,8 @@ import pytest
 
 from crypto_bot_cxc.broker import BacktestBroker, BacktestBrokerConfig
 from crypto_bot_cxc.engine import BacktestEngine
-from crypto_bot_cxc.events import MarketDataEvent
+from crypto_bot_cxc.events import MarketDataEvent, OrderIntent
+from crypto_bot_cxc.execution.models import Urgency
 from crypto_bot_cxc.execution.planner import ExecutionPlanner
 from crypto_bot_cxc.ledger import PortfolioLedger
 from crypto_bot_cxc.regime import RegimeState
@@ -149,6 +150,25 @@ def test_engine_resets_risk_manager_between_runs() -> None:
         )
 
     first_result = build_engine().run(candles)
+    assert risk_manager.validate(
+        intent=OrderIntent(
+            strategy_id="ema_trend",
+            symbol="BTC/USDT",
+            side="BUY",
+            urgency=Urgency.NORMAL,
+            reason="post_run_probe",
+            quantity=None,
+            limit_price=None,
+            stop_price=None,
+            deadline=None,
+            regime=RegimeState.UPTREND_LOW_VOL,
+        ),
+        portfolio_state=PortfolioLedger(initial_cash=Decimal("10000")).get_state(),
+        current_price=Decimal("100"),
+        current_equity=first_result.final_equity,
+        as_of=candles[-1].timestamp,
+    ) is None
+
     second_result = build_engine().run(candles)
 
     assert len(first_result.trades) == 2

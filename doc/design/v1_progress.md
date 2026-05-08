@@ -133,7 +133,7 @@ Next likely slice:
 
 Added a deterministic V1 smoke path:
 
-- `data/ohlcv/BTC_USDT_1h_v1_smoke.csv` is a tiny hourly OHLCV fixture with
+- `tests/fixtures/ohlcv/BTC_USDT_1h_v1_smoke.csv` is a tiny hourly OHLCV fixture with
   one EMA cross-up entry and one EMA cross-down exit.
 - `config/v1_smoke_strategy_config.yaml` keeps periods short so the smoke run
   exercises strategy, risk, execution, ledger, reports, and regime attribution
@@ -144,8 +144,14 @@ Added a deterministic V1 smoke path:
 
 Example:
 
-```powershell
-.venv\Scripts\python.exe -m crypto_bot_cxc.cli.backtest --input data/ohlcv/BTC_USDT_1h_v1_smoke.csv --config config/v1_smoke_strategy_config.yaml --output-dir outputs/v1_smoke --initial-cash 10000
+```bash
+cxc-backtest --input tests/fixtures/ohlcv/BTC_USDT_1h_v1_smoke.csv --config config/v1_smoke_strategy_config.yaml --output-dir outputs/v1_smoke --initial-cash 10000
+```
+
+Source-tree fallback:
+
+```bash
+python -m crypto_bot_cxc.cli.backtest --input tests/fixtures/ohlcv/BTC_USDT_1h_v1_smoke.csv --config config/v1_smoke_strategy_config.yaml --output-dir outputs/v1_smoke --initial-cash 10000
 ```
 
 Next likely slice:

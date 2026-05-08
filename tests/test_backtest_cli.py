@@ -12,6 +12,7 @@ from crypto_bot_cxc.cli.backtest import run_backtest
 from crypto_bot_cxc.data import GapPolicy
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SMOKE_FIXTURE_PATH = PROJECT_ROOT / "tests" / "fixtures" / "ohlcv" / "BTC_USDT_1h_v1_smoke.csv"
 
 
 def test_run_backtest_loads_strategy_config_and_writes_reports(tmp_path: Path) -> None:
@@ -116,7 +117,7 @@ def test_backtest_cli_smoke_fixture_writes_expected_reports(tmp_path: Path) -> N
             "-m",
             "crypto_bot_cxc.cli.backtest",
             "--input",
-            str(PROJECT_ROOT / "data" / "ohlcv" / "BTC_USDT_1h_v1_smoke.csv"),
+            str(SMOKE_FIXTURE_PATH),
             "--config",
             str(PROJECT_ROOT / "config" / "v1_smoke_strategy_config.yaml"),
             "--output-dir",
@@ -128,19 +129,24 @@ def test_backtest_cli_smoke_fixture_writes_expected_reports(tmp_path: Path) -> N
         capture_output=True,
         text=True,
         cwd=PROJECT_ROOT,
-        env={
-            **os.environ,
-            "PYTHONPATH": str(PROJECT_ROOT / "src"),
-        },
+        env=_subprocess_env_with_src_path(),
     )
 
     assert "trades=" in completed.stdout
     summary = json.loads((output_dir / "summary.json").read_text(encoding="utf-8"))
     assert summary["trades"] == "2"
+    # Exact value intentionally pins sizing, rounding, and next-candle execution behavior.
     assert summary["final_equity"] == "9800.000000"
     assert (output_dir / "equity_curve.csv").exists()
     assert (output_dir / "benchmark_comparison.json").exists()
     assert (output_dir / "regime_performance.csv").exists()
+
+
+def _subprocess_env_with_src_path() -> dict[str, str]:
+    src_path = str(PROJECT_ROOT / "src")
+    existing = os.environ.get("PYTHONPATH", "")
+    pythonpath = f"{src_path}{os.pathsep}{existing}" if existing else src_path
+    return {**os.environ, "PYTHONPATH": pythonpath}
 
 
 def _write_ohlcv_csv(path: Path, *, closes: list[str]) -> None:
