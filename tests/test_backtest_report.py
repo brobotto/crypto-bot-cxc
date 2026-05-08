@@ -79,7 +79,11 @@ def test_write_backtest_report_creates_required_files(tmp_path: Path) -> None:
     assert payload["final_equity"] == "1010"
     assert payload["benchmark_return_pct"] == "20.0"
     assert "sharpe_ratio" in payload
+    assert "sortino_ratio" in payload
+    assert "calmar_ratio" in payload
     assert "benchmark_sharpe_ratio" in payload
+    assert "benchmark_sortino_ratio" in payload
+    assert "benchmark_calmar_ratio" in payload
 
     benchmark_payload = json.loads(
         (tmp_path / "benchmark_comparison.json").read_text(encoding="utf-8")
@@ -87,7 +91,11 @@ def test_write_backtest_report_creates_required_files(tmp_path: Path) -> None:
     assert benchmark_payload["benchmark"] == "buy_and_hold"
     assert benchmark_payload["benchmark_metrics"]["return_pct"] == "20.0"
     assert "sharpe_ratio" in benchmark_payload["strategy"]
+    assert "sortino_ratio" in benchmark_payload["strategy"]
+    assert "calmar_ratio" in benchmark_payload["strategy"]
     assert "sharpe_ratio" in benchmark_payload["benchmark_metrics"]
+    assert "sortino_ratio" in benchmark_payload["benchmark_metrics"]
+    assert "calmar_ratio" in benchmark_payload["benchmark_metrics"]
 
     with (tmp_path / "trades.csv").open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
@@ -159,7 +167,7 @@ def test_regime_performance_groups_closed_trades_by_entry_regime(tmp_path: Path)
     assert trade_rows[0]["regime"] == "UPTREND_LOW_VOL"
 
 
-def test_summarize_adds_annualized_sharpe_ratio() -> None:
+def test_summarize_adds_risk_adjusted_ratios() -> None:
     equity_curve = [
         EquityPoint(timestamp=datetime(2024, 1, 1, tzinfo=UTC), equity=Decimal("1000")),
         EquityPoint(
@@ -185,8 +193,14 @@ def test_summarize_adds_annualized_sharpe_ratio() -> None:
     )
 
     assert summary.sharpe_ratio != Decimal("0")
+    assert summary.sortino_ratio != Decimal("0")
+    assert summary.calmar_ratio != Decimal("0")
     assert summary.benchmark_sharpe_ratio is not None
     assert summary.benchmark_sharpe_ratio != Decimal("0")
+    assert summary.benchmark_sortino_ratio is not None
+    assert summary.benchmark_sortino_ratio != Decimal("0")
+    assert summary.benchmark_calmar_ratio is not None
+    assert summary.benchmark_calmar_ratio != Decimal("0")
 
 
 def test_periods_per_year_uses_median_gap() -> None:

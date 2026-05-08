@@ -29,10 +29,17 @@ class StrategySettings:
 
 @dataclass(frozen=True, slots=True)
 class RiskSettings:
+    """Risk config loaded from YAML.
+
+    `atr_multiplier` is reserved for ATR stop sizing; it is not wired into
+    RiskConfig until V1 position sizing work.
+    """
+
     risk_per_trade: Decimal
     atr_multiplier: Decimal
     daily_loss_limit: Decimal
     max_drawdown: Decimal
+    max_consecutive_losses: int
     max_open_positions: int
     capital_reserve: Decimal
 
@@ -43,6 +50,7 @@ class RiskSettings:
             capital_reserve=self.capital_reserve,
             daily_loss_limit=self.daily_loss_limit,
             max_drawdown=self.max_drawdown,
+            max_consecutive_losses=self.max_consecutive_losses,
         )
 
 
@@ -114,6 +122,7 @@ def _load_risk_settings(section: Mapping[str, Any]) -> RiskSettings:
         atr_multiplier=_decimal_value(section, "atr_multiplier"),
         daily_loss_limit=_decimal_value(section, "daily_loss_limit"),
         max_drawdown=_decimal_value(section, "max_drawdown"),
+        max_consecutive_losses=_int_value(section, "max_consecutive_losses", default=3),
         max_open_positions=_int_value(section, "max_open_positions"),
         capital_reserve=_decimal_value(section, "capital_reserve"),
     )

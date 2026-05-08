@@ -26,9 +26,15 @@ def test_run_backtest_loads_strategy_config_and_writes_reports(tmp_path: Path) -
     )
 
     assert summary.final_equity == Decimal("1000")
-    assert (output_dir / "summary.json").exists()
-    assert (output_dir / "benchmark_comparison.json").exists()
-    assert (output_dir / "regime_performance.csv").exists()
+    for report_file in [
+        "trades.csv",
+        "equity_curve.csv",
+        "summary.json",
+        "benchmark_comparison.json",
+        "monthly_returns.csv",
+        "regime_performance.csv",
+    ]:
+        assert (output_dir / report_file).exists()
     with (output_dir / "trades.csv").open(newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
         assert "regime" in (reader.fieldnames or [])
@@ -48,6 +54,25 @@ def test_run_backtest_rejects_unsupported_strategy(tmp_path: Path) -> None:
         )
 
 
+def test_run_backtest_rejects_disabled_next_candle_execution(tmp_path: Path) -> None:
+    input_path = tmp_path / "ohlcv.csv"
+    _write_ohlcv_csv(input_path, closes=["100", "101", "102"])
+    config_path = _write_test_config(
+        tmp_path,
+        fast_period=2,
+        slow_period=3,
+        next_candle_execution=False,
+    )
+
+    with pytest.raises(ValueError, match="next_candle_execution=true"):
+        run_backtest(
+            input_path=input_path,
+            output_dir=tmp_path / "reports",
+            config_path=config_path,
+            initial_cash=Decimal("1000"),
+        )
+
+
 def test_run_backtest_warns_when_symbol_overrides_config(tmp_path: Path) -> None:
     input_path = tmp_path / "ohlcv.csv"
     _write_ohlcv_csv(input_path, closes=["100", "101", "102"])
@@ -59,6 +84,20 @@ def test_run_backtest_warns_when_symbol_overrides_config(tmp_path: Path) -> None
             config_path=_write_test_config(tmp_path, fast_period=2, slow_period=3),
             initial_cash=Decimal("1000"),
             symbol="SOL/USDT",
+        )
+
+
+def test_run_backtest_warns_when_forward_fill_is_enabled(tmp_path: Path) -> None:
+    input_path = tmp_path / "ohlcv.csv"
+    _write_ohlcv_csv(input_path, closes=["100", "101", "102"])
+
+    with pytest.warns(UserWarning, match="forward_fill"):
+        run_backtest(
+            input_path=input_path,
+            output_dir=tmp_path / "reports",
+            config_path=_write_test_config(tmp_path, fast_period=2, slow_period=3),
+            initial_cash=Decimal("1000"),
+            gap_policy=GapPolicy.FORWARD_FILL,
         )
 
 
@@ -89,6 +128,7 @@ def _write_test_config(
     fast_period: int = 2,
     slow_period: int = 4,
     warmup_period: int = 4,
+    next_candle_execution: bool = True,
 ) -> Path:
     path = tmp_path / "strategy_config.yaml"
     path.write_text(
@@ -122,7 +162,7 @@ execution:
   default_fee_rate: 0.001
   basic_slippage_rate: 0.0005
   conservative_slippage_rate: 0.001
-  next_candle_execution: true
+  next_candle_execution: {str(next_candle_execution).lower()}
 """.lstrip(),
         encoding="utf-8",
     )

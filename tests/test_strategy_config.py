@@ -24,6 +24,7 @@ def test_load_strategy_config_from_project_yaml() -> None:
     assert risk_config.capital_reserve == Decimal("0.4")
     assert risk_config.daily_loss_limit == Decimal("0.02")
     assert risk_config.max_drawdown == Decimal("0.1")
+    assert risk_config.max_consecutive_losses == 3
 
     broker_config = config.execution.to_backtest_broker_config()
     assert broker_config.fee_rate == Decimal("0.001")

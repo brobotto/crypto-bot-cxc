@@ -23,7 +23,7 @@ def main() -> None:
         input_path=args.input,
         output_dir=args.output_dir,
         config_path=args.config,
-        initial_cash=Decimal(str(args.initial_cash)),
+        initial_cash=args.initial_cash,
         symbol=args.symbol,
         timeframe=args.timeframe,
         gap_policy=GapPolicy(args.gap_policy),
@@ -88,6 +88,7 @@ def run_backtest(
             config.execution.to_backtest_broker_config(conservative=conservative_slippage)
         ),
         ledger=ledger,
+        # Fallback only; V1 config-driven backtests use regime_config below.
         regime_provider=lambda _event: RegimeState.NO_TRADE,
         regime_config=config.regime,
         warmup_period=config.strategy.warmup_period,

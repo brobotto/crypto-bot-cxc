@@ -114,6 +114,13 @@ class BacktestEngine:
                 elif self._ledger.position_quantity(fill.symbol) == 0:
                     position_entry_regimes.pop(fill.symbol, None)
 
+            current_equity = self._ledger.equity({candle.symbol: candle.close})
+            self._risk_manager.observe(
+                portfolio_state=self._ledger.get_state(),
+                current_equity=current_equity,
+                as_of=candle.timestamp,
+            )
+
             regime = self._detect_regime(candle, features)
             regime_curve.append(
                 RegimePoint(
@@ -136,6 +143,8 @@ class BacktestEngine:
                         intent=intent,
                         portfolio_state=self._ledger.get_state(),
                         current_price=candle.close,
+                        current_equity=current_equity,
+                        as_of=candle.timestamp,
                     )
                     if approved is None:
                         continue
@@ -145,7 +154,7 @@ class BacktestEngine:
             equity_curve.append(
                 EquityPoint(
                     timestamp=candle.timestamp,
-                    equity=self._ledger.equity({candle.symbol: candle.close}),
+                    equity=current_equity,
                 )
             )
 

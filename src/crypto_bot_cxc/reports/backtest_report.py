@@ -20,12 +20,16 @@ class SummaryMetrics:
     total_return_pct: Decimal
     max_drawdown_pct: Decimal
     sharpe_ratio: Decimal
+    sortino_ratio: Decimal
+    calmar_ratio: Decimal
     total_realized_pnl: Decimal
     total_fees: Decimal
     benchmark_final_equity: Decimal | None = None
     benchmark_return_pct: Decimal | None = None
     benchmark_max_drawdown_pct: Decimal | None = None
     benchmark_sharpe_ratio: Decimal | None = None
+    benchmark_sortino_ratio: Decimal | None = None
+    benchmark_calmar_ratio: Decimal | None = None
     excess_return_pct: Decimal | None = None
 
 
@@ -70,6 +74,8 @@ def summarize(
     benchmark_return_pct = None
     benchmark_max_drawdown_pct = None
     benchmark_sharpe_ratio = None
+    benchmark_sortino_ratio = None
+    benchmark_calmar_ratio = None
     excess_return_pct = None
     if benchmark_final_equity is not None:
         benchmark_return_pct = (
@@ -77,6 +83,11 @@ def summarize(
         ) * Decimal("100")
         benchmark_max_drawdown_pct = _max_drawdown_pct(benchmark_curve or [])
         benchmark_sharpe_ratio = _sharpe_ratio(benchmark_curve or [])
+        benchmark_sortino_ratio = _sortino_ratio(benchmark_curve or [])
+        benchmark_calmar_ratio = _calmar_ratio(
+            benchmark_curve or [],
+            initial_cash=initial_cash,
+        )
         excess_return_pct = total_return_pct - benchmark_return_pct
 
     return SummaryMetrics(
@@ -85,12 +96,16 @@ def summarize(
         total_return_pct=total_return_pct,
         max_drawdown_pct=_max_drawdown_pct(result.equity_curve),
         sharpe_ratio=_sharpe_ratio(result.equity_curve),
+        sortino_ratio=_sortino_ratio(result.equity_curve),
+        calmar_ratio=_calmar_ratio(result.equity_curve, initial_cash=initial_cash),
         total_realized_pnl=realized,
         total_fees=fees,
         benchmark_final_equity=benchmark_final_equity,
         benchmark_return_pct=benchmark_return_pct,
         benchmark_max_drawdown_pct=benchmark_max_drawdown_pct,
         benchmark_sharpe_ratio=benchmark_sharpe_ratio,
+        benchmark_sortino_ratio=benchmark_sortino_ratio,
+        benchmark_calmar_ratio=benchmark_calmar_ratio,
         excess_return_pct=excess_return_pct,
     )
 
@@ -155,12 +170,16 @@ def _write_benchmark_comparison(path: Path, summary: SummaryMetrics) -> None:
             "return_pct": str(summary.total_return_pct),
             "max_drawdown_pct": str(summary.max_drawdown_pct),
             "sharpe_ratio": str(summary.sharpe_ratio),
+            "sortino_ratio": str(summary.sortino_ratio),
+            "calmar_ratio": str(summary.calmar_ratio),
         },
         "benchmark_metrics": {
             "final_equity": _optional_decimal_to_json(summary.benchmark_final_equity),
             "return_pct": _optional_decimal_to_json(summary.benchmark_return_pct),
             "max_drawdown_pct": _optional_decimal_to_json(summary.benchmark_max_drawdown_pct),
             "sharpe_ratio": _optional_decimal_to_json(summary.benchmark_sharpe_ratio),
+            "sortino_ratio": _optional_decimal_to_json(summary.benchmark_sortino_ratio),
+            "calmar_ratio": _optional_decimal_to_json(summary.benchmark_calmar_ratio),
         },
         "excess_return_pct": _optional_decimal_to_json(summary.excess_return_pct),
     }
@@ -256,12 +275,7 @@ def _sharpe_ratio(equity_curve: list[EquityPoint]) -> Decimal:
     if len(equity_curve) < 2:
         return Decimal("0")
 
-    returns: list[Decimal] = []
-    for previous, current in zip(equity_curve, equity_curve[1:], strict=False):
-        if previous.equity <= 0:
-            return Decimal("0")
-        returns.append(current.equity / previous.equity - Decimal("1"))
-
+    returns = _period_returns(equity_curve)
     if not returns:
         return Decimal("0")
     mean_return = sum(returns, start=Decimal("0")) / Decimal(len(returns))
@@ -275,6 +289,46 @@ def _sharpe_ratio(equity_curve: list[EquityPoint]) -> Decimal:
     if periods_per_year <= 0:
         return Decimal("0")
     return mean_return / variance.sqrt() * periods_per_year.sqrt()
+
+
+def _sortino_ratio(equity_curve: list[EquityPoint]) -> Decimal:
+    if len(equity_curve) < 2:
+        return Decimal("0")
+
+    returns = _period_returns(equity_curve)
+    if not returns:
+        return Decimal("0")
+    mean_return = sum(returns, start=Decimal("0")) / Decimal(len(returns))
+    downside_squares = (min(period_return, Decimal("0")) ** 2 for period_return in returns)
+    downside_variance = (
+        sum(downside_squares, start=Decimal("0"))
+        / Decimal(len(returns))
+    )
+    if downside_variance == 0:
+        return Decimal("0")
+    periods_per_year = _periods_per_year(equity_curve)
+    if periods_per_year <= 0:
+        return Decimal("0")
+    return mean_return / downside_variance.sqrt() * periods_per_year.sqrt()
+
+
+def _calmar_ratio(equity_curve: list[EquityPoint], *, initial_cash: Decimal) -> Decimal:
+    if not equity_curve or initial_cash <= 0:
+        return Decimal("0")
+    max_drawdown_pct = _max_drawdown_pct(equity_curve)
+    if max_drawdown_pct == 0:
+        return Decimal("0")
+    total_return_pct = (equity_curve[-1].equity / initial_cash - Decimal("1")) * Decimal("100")
+    return total_return_pct / max_drawdown_pct
+
+
+def _period_returns(equity_curve: list[EquityPoint]) -> list[Decimal]:
+    returns: list[Decimal] = []
+    for previous, current in zip(equity_curve, equity_curve[1:], strict=False):
+        if previous.equity <= 0:
+            return []
+        returns.append(current.equity / previous.equity - Decimal("1"))
+    return returns
 
 
 def _periods_per_year(equity_curve: list[EquityPoint]) -> Decimal:

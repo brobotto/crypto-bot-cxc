@@ -63,6 +63,9 @@ Added the first V1 runner entrypoint:
 - It supports one-symbol V1 backtests from CSV/Parquet OHLCV.
 - It uses the V1 regime detector path via `RegimeConfig`.
 - It keeps Spike C runner intact as a reproducibility/reference command.
+- `daily_loss_limit`, `max_drawdown`, and `atr_multiplier` are loaded and
+  validated, but enforcement is explicitly deferred to the V1 risk/circuit
+  breaker slice.
 
 Example:
 
@@ -75,3 +78,50 @@ Next likely slice:
 - Add Calmar/Sortino benchmark metrics.
 - Split V1 risk circuit breaker work into explicit `risk/circuit_breaker.py`.
 - Add a tiny smoke dataset/fixture or documented command for local V1 smoke runs.
+
+## 2026-05-08 Report Metrics Slice
+
+Expanded core report metrics beyond Sharpe:
+
+- `summary.json` now includes `sortino_ratio` and `calmar_ratio`.
+- Benchmark fields now include `benchmark_sortino_ratio` and
+  `benchmark_calmar_ratio`.
+- `benchmark_comparison.json` now includes Sharpe, Sortino, and Calmar for both
+  strategy and buy-and-hold benchmark.
+
+Notes:
+
+- Calmar is currently `total_return_pct / max_drawdown_pct`.
+- Sortino is annualized from period returns with downside deviation against a
+  zero target return.
+
+Next likely slice:
+
+- Split V1 risk circuit breaker work into explicit `risk/circuit_breaker.py`.
+- Add a tiny smoke dataset/fixture or documented command for local V1 smoke runs.
+
+## 2026-05-08 Risk Circuit Breaker Slice
+
+Added V1 entry-blocking circuit breaker:
+
+- New `risk/circuit_breaker.py` module tracks:
+  - daily loss limit
+  - max drawdown
+  - consecutive realized losses
+- `RiskManager` now blocks new BUY intents when the breaker trips.
+- SELL intents are still allowed so existing long positions can exit.
+- `config/strategy_config.yaml` now includes `max_consecutive_losses`.
+- Backtest engine observes current equity on every candle before strategy
+  decisions, so daily loss and drawdown state do not depend on BUY signals
+  appearing first.
+
+Current scope:
+
+- The breaker only blocks entries.
+- It does not flatten positions, cancel orders, or force reduce-only mode yet.
+- Engine passes candle timestamp and current equity into risk validation.
+
+Next likely slice:
+
+- Add a tiny smoke dataset/fixture or documented command for local V1 smoke runs.
+- Add position sizing with ATR stop distance instead of simple cash fraction.
