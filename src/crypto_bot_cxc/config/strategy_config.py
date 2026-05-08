@@ -41,6 +41,8 @@ class RiskSettings:
             risk_per_trade=self.risk_per_trade,
             max_open_positions=self.max_open_positions,
             capital_reserve=self.capital_reserve,
+            daily_loss_limit=self.daily_loss_limit,
+            max_drawdown=self.max_drawdown,
         )
 
 

@@ -2,15 +2,32 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
+
+from crypto_bot_cxc.events.models import MarketDataEvent
 
 
 @dataclass(frozen=True, slots=True)
 class EmaState:
     fast: Decimal
     slow: Decimal
-    previous_fast: Decimal | None
-    previous_slow: Decimal | None
+    samples: int
+
+
+@dataclass(frozen=True, slots=True)
+class FeatureSnapshot:
+    timestamp: datetime
+    symbol: str
+    ema_fast: Decimal
+    ema_slow: Decimal
+    atr: Decimal
+    adx: Decimal
+    bb_width: Decimal
+    bb_width_ma: Decimal
+    volume: Decimal
+    avg_volume: Decimal
+    spread: Decimal
     samples: int
 
 
@@ -28,8 +45,6 @@ def update_ema(
     return EmaState(
         fast=fast,
         slow=slow,
-        previous_fast=previous_fast,
-        previous_slow=previous_slow,
         samples=samples + 1,
     )
 
@@ -65,7 +80,11 @@ def calc_adx(
     *,
     period: int,
 ) -> list[Decimal]:
-    """Return Wilder-smoothed Average Directional Index values."""
+    """Return Wilder-smoothed Average Directional Index values.
+
+    The first `period` values are forced to zero; ADX is most reliable after
+    roughly `2 * period` samples, so engine warmup should exceed that.
+    """
     _validate_period(period)
     _validate_equal_lengths(highs=highs, lows=lows, closes=closes)
     if not highs:
@@ -127,6 +146,57 @@ def calc_bb_width(
         std_dev = variance.sqrt()
         widths.append((Decimal("2") * std_multiplier * std_dev) / mean)
     return widths
+
+
+def build_feature_snapshots(
+    events: Sequence[MarketDataEvent],
+    *,
+    fast_period: int,
+    slow_period: int,
+    atr_period: int = 14,
+    adx_period: int = 14,
+    bb_period: int = 20,
+    bb_width_ma_period: int = 20,
+    volume_ma_period: int = 20,
+    spread: Decimal = Decimal("0"),
+) -> list[FeatureSnapshot]:
+    """Precompute per-candle feature snapshots without looking past each index.
+
+    Backtests without bid/ask data use spread=0, so spread-based NO_TRADE
+    filtering is intentionally inactive until richer market data is available.
+    """
+    closes = [event.close for event in events]
+    highs = [event.high for event in events]
+    lows = [event.low for event in events]
+    volumes = [event.volume for event in events]
+
+    ema_fast = calc_ema(closes, period=fast_period)
+    ema_slow = calc_ema(closes, period=slow_period)
+    atr = calc_atr(highs, lows, closes, period=atr_period)
+    adx = calc_adx(highs, lows, closes, period=adx_period)
+    bb_width = calc_bb_width(closes, period=bb_period)
+    bb_width_ma = _rolling_mean(bb_width, period=bb_width_ma_period)
+    avg_volume = _rolling_mean(volumes, period=volume_ma_period)
+
+    snapshots: list[FeatureSnapshot] = []
+    for index, event in enumerate(events):
+        snapshots.append(
+            FeatureSnapshot(
+                timestamp=event.timestamp,
+                symbol=event.symbol,
+                ema_fast=ema_fast[index],
+                ema_slow=ema_slow[index],
+                atr=atr[index],
+                adx=adx[index],
+                bb_width=bb_width[index],
+                bb_width_ma=bb_width_ma[index],
+                volume=event.volume,
+                avg_volume=avg_volume[index],
+                spread=spread,
+                samples=index + 1,
+            )
+        )
+    return snapshots
 
 
 def _next_ema(*, close: Decimal, previous: Decimal | None, period: int) -> Decimal:
@@ -202,6 +272,15 @@ def _mean(values: Sequence[Decimal]) -> Decimal:
     if not values:
         raise ValueError("cannot calculate mean of empty values")
     return sum(values, start=Decimal("0")) / Decimal(len(values))
+
+
+def _rolling_mean(values: Sequence[Decimal], *, period: int) -> list[Decimal]:
+    _validate_period(period)
+    means: list[Decimal] = []
+    for index in range(len(values)):
+        start = max(0, index + 1 - period)
+        means.append(_mean(values[start : index + 1]))
+    return means
 
 
 def _validate_period(period: int) -> None:

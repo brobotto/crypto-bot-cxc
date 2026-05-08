@@ -5,10 +5,12 @@ import json
 from dataclasses import asdict, dataclass
 from decimal import Decimal
 from pathlib import Path
+from uuid import UUID
 
 from crypto_bot_cxc.engine import BacktestResult, EquityPoint
 from crypto_bot_cxc.events import MarketDataEvent
 from crypto_bot_cxc.ledger.models import Trade
+from crypto_bot_cxc.regime.models import RegimeState
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,12 +44,16 @@ def write_backtest_report(
         benchmark_curve=benchmark_curve,
     )
 
-    _write_trades(output_dir / "trades.csv", result.trades)
+    _write_trades(output_dir / "trades.csv", result.trades, result.trade_regimes)
     _write_equity_curve(output_dir / "equity_curve.csv", result.equity_curve)
     _write_summary(output_dir / "summary.json", summary)
     _write_benchmark_comparison(output_dir / "benchmark_comparison.json", summary)
     _write_monthly_returns(output_dir / "monthly_returns.csv", result.equity_curve)
-    _write_regime_performance_placeholder(output_dir / "regime_performance.csv")
+    _write_regime_performance(
+        output_dir / "regime_performance.csv",
+        result.trades,
+        result.trade_regimes,
+    )
     return summary
 
 
@@ -89,7 +95,11 @@ def summarize(
     )
 
 
-def _write_trades(path: Path, trades: list[Trade]) -> None:
+def _write_trades(
+    path: Path,
+    trades: list[Trade],
+    trade_regimes: dict[UUID, RegimeState],
+) -> None:
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(
             handle,
@@ -101,6 +111,7 @@ def _write_trades(path: Path, trades: list[Trade]) -> None:
                 "price",
                 "fee",
                 "realized_pnl",
+                "regime",
                 "intent_id",
                 "fill_id",
             ],
@@ -116,6 +127,7 @@ def _write_trades(path: Path, trades: list[Trade]) -> None:
                     "price": str(trade.price),
                     "fee": str(trade.fee),
                     "realized_pnl": str(trade.realized_pnl),
+                    "regime": _regime_to_csv(trade_regimes.get(trade.intent_id)),
                     "intent_id": str(trade.intent_id),
                     "fill_id": str(trade.fill_id),
                 }
@@ -179,7 +191,11 @@ def _write_monthly_returns(path: Path, equity_curve: list[EquityPoint]) -> None:
             writer.writerow({"month": month, "return_pct": str(return_pct)})
 
 
-def _write_regime_performance_placeholder(path: Path) -> None:
+def _write_regime_performance(
+    path: Path,
+    trades: list[Trade],
+    trade_regimes: dict[UUID, RegimeState],
+) -> None:
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(
             handle,
@@ -189,22 +205,39 @@ def _write_regime_performance_placeholder(path: Path) -> None:
                 "win_rate",
                 "avg_pnl",
                 "profit_factor",
-                "sharpe",
+                "trade_sharpe",
                 "notes",
             ],
         )
         writer.writeheader()
-        writer.writerow(
-            {
-                "regime": "INSUFFICIENT_DATA",
-                "trades": "0",
-                "win_rate": "",
-                "avg_pnl": "",
-                "profit_factor": "",
-                "sharpe": "",
-                "notes": "Regime attribution not wired in Spike C pass 2",
-            }
-        )
+        groups = _closed_trade_pnls_by_regime(trades, trade_regimes)
+        if not groups:
+            writer.writerow(
+                {
+                    "regime": "INSUFFICIENT_DATA",
+                    "trades": "0",
+                    "win_rate": "",
+                    "avg_pnl": "",
+                    "profit_factor": "",
+                    "trade_sharpe": "",
+                    "notes": "No closed trades with regime attribution yet",
+                }
+            )
+            return
+
+        for regime in sorted(groups):
+            pnls = groups[regime]
+            writer.writerow(
+                {
+                    "regime": regime,
+                    "trades": str(len(pnls)),
+                    "win_rate": str(_win_rate_pct(pnls)),
+                    "avg_pnl": str(_average_pnl(pnls)),
+                    "profit_factor": _profit_factor_to_csv(pnls),
+                    "trade_sharpe": str(_trade_pnl_sharpe(pnls)),
+                    "notes": "insufficient_sample" if len(pnls) < 20 else "",
+                }
+            )
 
 
 def _max_drawdown_pct(equity_curve: list[EquityPoint]) -> Decimal:
@@ -265,6 +298,59 @@ def _median(values: list[Decimal]) -> Decimal:
     if len(ordered) % 2 == 1:
         return ordered[midpoint]
     return (ordered[midpoint - 1] + ordered[midpoint]) / Decimal("2")
+
+
+def _closed_trade_pnls_by_regime(
+    trades: list[Trade],
+    trade_regimes: dict[UUID, RegimeState],
+) -> dict[str, list[Decimal]]:
+    groups: dict[str, list[Decimal]] = {}
+    for trade in trades:
+        if trade.side != "SELL":
+            continue
+        regime = trade_regimes.get(trade.intent_id)
+        if regime is None:
+            continue
+        groups.setdefault(regime.value, []).append(trade.realized_pnl)
+    return groups
+
+
+def _win_rate_pct(values: list[Decimal]) -> Decimal:
+    if not values:
+        return Decimal("0")
+    wins = sum(1 for value in values if value > 0)
+    return Decimal(wins) / Decimal(len(values)) * Decimal("100")
+
+
+def _average_pnl(values: list[Decimal]) -> Decimal:
+    if not values:
+        return Decimal("0")
+    return sum(values, start=Decimal("0")) / Decimal(len(values))
+
+
+def _profit_factor_to_csv(values: list[Decimal]) -> str:
+    gross_profit = sum((value for value in values if value > 0), start=Decimal("0"))
+    gross_loss = abs(sum((value for value in values if value < 0), start=Decimal("0")))
+    if gross_loss == 0:
+        return "inf" if gross_profit > 0 else "0"
+    return str(gross_profit / gross_loss)
+
+
+def _trade_pnl_sharpe(values: list[Decimal]) -> Decimal:
+    if len(values) < 2:
+        return Decimal("0")
+    mean_value = _average_pnl(values)
+    variance = (
+        sum(((value - mean_value) ** 2 for value in values), start=Decimal("0"))
+        / Decimal(len(values))
+    )
+    if variance == 0:
+        return Decimal("0")
+    return mean_value / variance.sqrt()
+
+
+def _regime_to_csv(regime: RegimeState | None) -> str:
+    return "" if regime is None else regime.value
 
 
 def _buy_and_hold_curve(

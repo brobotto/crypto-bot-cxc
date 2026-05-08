@@ -66,6 +66,10 @@ def test_engine_fills_after_signal_candle_not_on_signal_candle() -> None:
     assert result.trades[1].side == "SELL"
     assert result.trades[1].timestamp == candles[6].timestamp
     assert result.trades[1].price == Decimal("65")
+    assert len(result.feature_snapshots) == len(candles)
+    assert len(result.regime_curve) == len(candles)
+    assert result.trade_regimes[result.trades[0].intent_id] == RegimeState.UPTREND_LOW_VOL
+    assert result.trade_regimes[result.trades[1].intent_id] == RegimeState.UPTREND_LOW_VOL
 
 
 def test_engine_rejects_non_positive_warmup_period() -> None:

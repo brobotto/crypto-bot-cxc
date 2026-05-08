@@ -1,4 +1,8 @@
-from crypto_bot_cxc.engine.backtest_engine import BacktestEngine, BacktestResult, EquityPoint
+from crypto_bot_cxc.engine.backtest_engine import (
+    BacktestEngine,
+    BacktestResult,
+    EquityPoint,
+    RegimePoint,
+)
 
-__all__ = ["BacktestEngine", "BacktestResult", "EquityPoint"]
-
+__all__ = ["BacktestEngine", "BacktestResult", "EquityPoint", "RegimePoint"]

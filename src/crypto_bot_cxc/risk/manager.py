@@ -12,6 +12,8 @@ class RiskConfig:
     risk_per_trade: Decimal
     max_open_positions: int
     capital_reserve: Decimal = Decimal("0")
+    daily_loss_limit: Decimal = Decimal("1")
+    max_drawdown: Decimal = Decimal("1")
     min_order_notional: Decimal = Decimal("10")
     quantity_step: Decimal = Decimal("0.000001")
 
@@ -22,6 +24,10 @@ class RiskConfig:
             raise ValueError("max_open_positions must be positive")
         if self.capital_reserve < 0 or self.capital_reserve >= 1:
             raise ValueError("capital_reserve must be within [0, 1)")
+        if self.daily_loss_limit <= 0 or self.daily_loss_limit > 1:
+            raise ValueError("daily_loss_limit must be within (0, 1]")
+        if self.max_drawdown <= 0 or self.max_drawdown > 1:
+            raise ValueError("max_drawdown must be within (0, 1]")
         if self.min_order_notional <= 0:
             raise ValueError("min_order_notional must be positive")
         if self.quantity_step <= 0:
@@ -29,7 +35,7 @@ class RiskConfig:
 
 
 class RiskManager:
-    """Minimal long-only risk manager for Spike C."""
+    """V1 baseline long-only risk manager."""
 
     def __init__(self, config: RiskConfig) -> None:
         self._config = config

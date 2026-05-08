@@ -1,6 +1,8 @@
 from crypto_bot_cxc.data.exchange_client import OhlcvRow, download_ohlcv
 from crypto_bot_cxc.data.feature_engine import (
     EmaState,
+    FeatureSnapshot,
+    build_feature_snapshots,
     calc_adx,
     calc_atr,
     calc_bb_width,
@@ -11,8 +13,10 @@ from crypto_bot_cxc.data.ohlcv_store import GapPolicy, load_ohlcv_events
 
 __all__ = [
     "EmaState",
+    "FeatureSnapshot",
     "GapPolicy",
     "OhlcvRow",
+    "build_feature_snapshots",
     "calc_adx",
     "calc_atr",
     "calc_bb_width",

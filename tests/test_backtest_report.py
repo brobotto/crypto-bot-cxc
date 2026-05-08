@@ -8,6 +8,7 @@ from uuid import uuid4
 from crypto_bot_cxc.engine import BacktestResult, EquityPoint
 from crypto_bot_cxc.events import MarketDataEvent
 from crypto_bot_cxc.ledger.models import Trade
+from crypto_bot_cxc.regime import RegimeState
 from crypto_bot_cxc.reports import write_backtest_report
 from crypto_bot_cxc.reports.backtest_report import _periods_per_year, summarize
 
@@ -91,6 +92,71 @@ def test_write_backtest_report_creates_required_files(tmp_path: Path) -> None:
     with (tmp_path / "trades.csv").open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     assert rows[0]["realized_pnl"] == "9.79"
+
+
+def test_regime_performance_groups_closed_trades_by_entry_regime(tmp_path: Path) -> None:
+    first_intent_id = uuid4()
+    second_intent_id = uuid4()
+    trades = [
+        Trade(
+            fill_id=uuid4(),
+            intent_id=first_intent_id,
+            symbol="BTC/USDT",
+            side="SELL",
+            quantity=Decimal("1"),
+            price=Decimal("110"),
+            fee=Decimal("0.1"),
+            realized_pnl=Decimal("10"),
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        ),
+        Trade(
+            fill_id=uuid4(),
+            intent_id=second_intent_id,
+            symbol="BTC/USDT",
+            side="SELL",
+            quantity=Decimal("1"),
+            price=Decimal("95"),
+            fee=Decimal("0.1"),
+            realized_pnl=Decimal("-5"),
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC) + timedelta(hours=1),
+        ),
+    ]
+    equity_curve = [
+        EquityPoint(timestamp=datetime(2024, 1, 1, tzinfo=UTC), equity=Decimal("1000")),
+        EquityPoint(
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC) + timedelta(hours=1),
+            equity=Decimal("1005"),
+        ),
+    ]
+    result = BacktestResult(
+        trades=trades,
+        equity_curve=equity_curve,
+        final_equity=Decimal("1005"),
+        trade_regimes={
+            first_intent_id: RegimeState.UPTREND_LOW_VOL,
+            second_intent_id: RegimeState.UPTREND_LOW_VOL,
+        },
+    )
+
+    write_backtest_report(result, output_dir=tmp_path, initial_cash=Decimal("1000"))
+
+    with (tmp_path / "regime_performance.csv").open(newline="", encoding="utf-8") as handle:
+        regime_rows = list(csv.DictReader(handle))
+    assert regime_rows == [
+        {
+            "regime": "UPTREND_LOW_VOL",
+            "trades": "2",
+            "win_rate": "50.0",
+            "avg_pnl": "2.5",
+            "profit_factor": "2",
+            "trade_sharpe": "0.3333333333333333333333333333",
+            "notes": "insufficient_sample",
+        }
+    ]
+
+    with (tmp_path / "trades.csv").open(newline="", encoding="utf-8") as handle:
+        trade_rows = list(csv.DictReader(handle))
+    assert trade_rows[0]["regime"] == "UPTREND_LOW_VOL"
 
 
 def test_summarize_adds_annualized_sharpe_ratio() -> None:

@@ -36,6 +36,7 @@ spike-d = [
 
 [project.scripts]
 cxc-download-ohlcv = "crypto_bot_cxc.cli.download_ohlcv:main"
+cxc-backtest = "crypto_bot_cxc.cli.backtest:main"
 cxc-spike-c-backtest = "crypto_bot_cxc.cli.spike_c_backtest:main"
 
 [tool.setuptools.packages.find]
