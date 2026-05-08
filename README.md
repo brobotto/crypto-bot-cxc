@@ -2,7 +2,7 @@
 
 Backtest-first crypto trading bot research and implementation workspace.
 
-Current phase: V0 — framework spikes and design contracts.
+Current phase: V1 backtest core.
 
 Key references:
 
@@ -18,3 +18,8 @@ Core direction:
 - Risk-first and ledger-centric
 - Backtest, paper, and live should share the same strategy/risk/execution contracts
 
+V1 smoke backtest:
+
+```powershell
+.venv\Scripts\python.exe -m crypto_bot_cxc.cli.backtest --input data/ohlcv/BTC_USDT_1h_v1_smoke.csv --config config/v1_smoke_strategy_config.yaml --output-dir outputs/v1_smoke --initial-cash 10000
+```

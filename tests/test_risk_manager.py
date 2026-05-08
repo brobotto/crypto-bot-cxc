@@ -60,6 +60,38 @@ def test_risk_manager_observe_updates_breaker_without_buy_signal() -> None:
     ) is None
 
 
+def test_risk_manager_reset_clears_circuit_breaker_state() -> None:
+    manager = RiskManager(
+        RiskConfig(
+            risk_per_trade=Decimal("0.10"),
+            max_open_positions=1,
+            daily_loss_limit=Decimal("0.02"),
+            max_drawdown=Decimal("0.50"),
+        )
+    )
+    state = portfolio_state(cash=Decimal("1000"))
+    as_of = datetime(2024, 1, 1, tzinfo=UTC)
+
+    manager.observe(portfolio_state=state, current_equity=Decimal("1000"), as_of=as_of)
+    assert manager.validate(
+        intent=buy_intent(),
+        portfolio_state=state,
+        current_price=Decimal("100"),
+        current_equity=Decimal("980"),
+        as_of=as_of,
+    ) is None
+
+    manager.reset()
+
+    assert manager.validate(
+        intent=buy_intent(),
+        portfolio_state=state,
+        current_price=Decimal("100"),
+        current_equity=Decimal("980"),
+        as_of=as_of,
+    ) is not None
+
+
 def test_risk_manager_blocks_buy_after_consecutive_losses_but_allows_sell() -> None:
     manager = RiskManager(
         RiskConfig(

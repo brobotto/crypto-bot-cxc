@@ -114,6 +114,9 @@ Added V1 entry-blocking circuit breaker:
 - Backtest engine observes current equity on every candle before strategy
   decisions, so daily loss and drawdown state do not depend on BUY signals
   appearing first.
+- Circuit breaker state is reset at the start of each `BacktestEngine.run(...)`
+  so repeated backtests with the same `RiskManager` instance do not leak peak
+  equity, day-start equity, or consecutive-loss counters.
 
 Current scope:
 
@@ -125,3 +128,28 @@ Next likely slice:
 
 - Add a tiny smoke dataset/fixture or documented command for local V1 smoke runs.
 - Add position sizing with ATR stop distance instead of simple cash fraction.
+
+## 2026-05-08 Smoke Backtest Fixture Slice
+
+Added a deterministic V1 smoke path:
+
+- `data/ohlcv/BTC_USDT_1h_v1_smoke.csv` is a tiny hourly OHLCV fixture with
+  one EMA cross-up entry and one EMA cross-down exit.
+- `config/v1_smoke_strategy_config.yaml` keeps periods short so the smoke run
+  exercises strategy, risk, execution, ledger, reports, and regime attribution
+  without relying on external data.
+- CLI smoke test runs `python -m crypto_bot_cxc.cli.backtest` against those
+  fixtures and asserts expected report output.
+- `README.md` now includes the local smoke command.
+
+Example:
+
+```powershell
+.venv\Scripts\python.exe -m crypto_bot_cxc.cli.backtest --input data/ohlcv/BTC_USDT_1h_v1_smoke.csv --config config/v1_smoke_strategy_config.yaml --output-dir outputs/v1_smoke --initial-cash 10000
+```
+
+Next likely slice:
+
+- Decide whether V1 should activate ATR stop handling or ATR-based sizing first.
+- Then run a real OHLCV dataset through the V1 report path and start validation
+  gate work.

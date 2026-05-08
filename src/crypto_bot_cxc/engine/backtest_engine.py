@@ -79,6 +79,7 @@ class BacktestEngine:
 
     def run(self, candles: list[MarketDataEvent]) -> BacktestResult:
         self._strategy.reset()
+        self._risk_manager.reset()
         feature_snapshots = build_feature_snapshots(
             candles,
             fast_period=self._strategy.fast_period,

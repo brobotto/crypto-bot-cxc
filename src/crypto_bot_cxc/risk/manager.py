@@ -85,6 +85,9 @@ class RiskManager:
             as_of=as_of,
         )
 
+    def reset(self) -> None:
+        self._circuit_breaker.reset()
+
     def _approve_buy(
         self,
         intent: OrderIntent,
@@ -142,6 +145,11 @@ class RiskManager:
         portfolio_state: PortfolioState,
         current_price: Decimal,
     ) -> Decimal:
+        """Fallback single-symbol equity estimate.
+
+        Only the intent symbol is marked at current_price. Multi-symbol callers
+        should pass current_equity explicitly.
+        """
         equity = portfolio_state.cash
         for symbol, position in portfolio_state.positions.items():
             if symbol == intent.symbol:

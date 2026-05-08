@@ -62,6 +62,11 @@ class CircuitBreaker:
         current_equity: Decimal,
         as_of: datetime | None,
     ) -> CircuitBreakerStatus:
+        """Observe current state and return whether new entries should be blocked.
+
+        This method has side effects: it updates day-start equity, peak equity,
+        last realized PnL, and the consecutive-loss counter.
+        """
         if current_equity <= 0:
             return CircuitBreakerStatus(
                 is_blocked=True,
@@ -78,6 +83,9 @@ class CircuitBreaker:
     @property
     def consecutive_losses(self) -> int:
         return self._state.consecutive_losses
+
+    def reset(self) -> None:
+        self._state = _CircuitBreakerState()
 
     def _observe_day(self, *, current_equity: Decimal, as_of: datetime | None) -> None:
         current_day = as_of.date() if as_of is not None else None

@@ -118,3 +118,38 @@ def test_engine_empty_candle_list_returns_initial_cash() -> None:
     assert result.trades == []
     assert result.equity_curve == []
     assert result.final_equity == Decimal("10000")
+
+
+def test_engine_resets_risk_manager_between_runs() -> None:
+    candles = make_candles(
+        closes=["100", "90", "80", "120", "130", "70", "60"],
+        opens=["100", "90", "80", "120", "125", "70", "65"],
+    )
+    risk_manager = RiskManager(
+        RiskConfig(
+            risk_per_trade=Decimal("0.10"),
+            max_open_positions=1,
+            daily_loss_limit=Decimal("0.02"),
+            max_drawdown=Decimal("0.10"),
+            min_order_notional=Decimal("10"),
+        )
+    )
+
+    def build_engine() -> BacktestEngine:
+        return BacktestEngine(
+            strategy=EMATrendStrategy(EMATrendConfig(fast_period=2, slow_period=4)),
+            risk_manager=risk_manager,
+            planner=ExecutionPlanner(),
+            broker=BacktestBroker(
+                BacktestBrokerConfig(fee_rate=Decimal("0.001"), slippage_rate=Decimal("0"))
+            ),
+            ledger=PortfolioLedger(initial_cash=Decimal("10000")),
+            regime_provider=lambda _event: RegimeState.UPTREND_LOW_VOL,
+            warmup_period=1,
+        )
+
+    first_result = build_engine().run(candles)
+    second_result = build_engine().run(candles)
+
+    assert len(first_result.trades) == 2
+    assert len(second_result.trades) == 2

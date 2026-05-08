@@ -1,4 +1,8 @@
 import csv
+import json
+import os
+import subprocess
+import sys
 from decimal import Decimal
 from pathlib import Path
 
@@ -6,6 +10,8 @@ import pytest
 
 from crypto_bot_cxc.cli.backtest import run_backtest
 from crypto_bot_cxc.data import GapPolicy
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_run_backtest_loads_strategy_config_and_writes_reports(tmp_path: Path) -> None:
@@ -99,6 +105,42 @@ def test_run_backtest_warns_when_forward_fill_is_enabled(tmp_path: Path) -> None
             initial_cash=Decimal("1000"),
             gap_policy=GapPolicy.FORWARD_FILL,
         )
+
+
+def test_backtest_cli_smoke_fixture_writes_expected_reports(tmp_path: Path) -> None:
+    output_dir = tmp_path / "smoke_reports"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "crypto_bot_cxc.cli.backtest",
+            "--input",
+            str(PROJECT_ROOT / "data" / "ohlcv" / "BTC_USDT_1h_v1_smoke.csv"),
+            "--config",
+            str(PROJECT_ROOT / "config" / "v1_smoke_strategy_config.yaml"),
+            "--output-dir",
+            str(output_dir),
+            "--initial-cash",
+            "10000",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        cwd=PROJECT_ROOT,
+        env={
+            **os.environ,
+            "PYTHONPATH": str(PROJECT_ROOT / "src"),
+        },
+    )
+
+    assert "trades=" in completed.stdout
+    summary = json.loads((output_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["trades"] == "2"
+    assert summary["final_equity"] == "9800.000000"
+    assert (output_dir / "equity_curve.csv").exists()
+    assert (output_dir / "benchmark_comparison.json").exists()
+    assert (output_dir / "regime_performance.csv").exists()
 
 
 def _write_ohlcv_csv(path: Path, *, closes: list[str]) -> None:
